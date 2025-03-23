@@ -1,0 +1,37 @@
+Debug
+Bin
+Obj
+packages
+node_modules
+dist
+.vs
+.config
+*.user
+*.zip
+*.csv
+*.txt
+*.bat
+*.log*
+import.sql
+
+# geospatial files
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.sbn
+*.sbx
+*.xml
+*.kml
+*.kmz
+*.geojson
+
+# editor files
+.vscode
+.cursor
+
+.env
+.env.local
+.env.*.local
+

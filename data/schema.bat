@@ -1,0 +1,1 @@
+pg_dump -U postgres -d census --schema-only -f schema.sql

@@ -1,0 +1,13 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Electoral Mapper";
+}
+
+@section Head {
+    <script src="https://maps.googleapis.com/maps/api/js?key=@(Model.MapsApiKey)&libraries=maps,geometry"></script>
+    <script type="text/javascript" src="~/index.js" defer></script>
+    <link rel="stylesheet" href="~/index.css" />
+}
+
+<div id="app"></div>

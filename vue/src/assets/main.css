@@ -1,0 +1,98 @@
+
+body {
+  min-height: 100vh;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+}
+
+a {
+  color: rgb(72, 117, 199);
+}
+
+
+.button {
+  display: inline-block;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  padding-right: 25px;
+}
+
+.button::after {
+  content: "▼";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8em;
+}
+
+.dialog-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.dialog {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1001;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  overflow-y: auto;
+}
+
+.dialog ul {
+  list-style: none;
+  padding: 0;
+}
+
+.dialog ul.cols {
+  height: calc(100% - 70px);
+  columns: 20em;
+  column-fill: auto;
+}
+
+.dialog ul.mono {
+  font-family: 'Lucida Console', 'Courier New', Courier, monospace;
+}
+
+.dialog ul li {
+  margin-bottom: 5px;
+}
+
+.dialog ul li.selected {
+  color: red !important;
+}
+
+.dialog ul li label:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.radio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-list label:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
