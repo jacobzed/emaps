@@ -1,3 +1,11 @@
+/*
+
+Copyright (c) 2025 Jacob Zielinski
+Licensed under a source-available license. See LICENSE file for details.
+
+*/
+
+
 using System.Data;
 using System.Data.SqlClient;
 using System.Text.Json;
@@ -139,7 +147,7 @@ app.MapGet("/api/census/trait", async ([FromServices] DataService dataService) =
     // To simplify the first iteration of the UI, I'm going to hardcode the censusId
     var censusId = 1;
     var results = await dataService.GetCensusTraits(censusId);
-    int[] suggested = [ 1, 9, 13, 24, 42, 60, 66, 396, 397, 686, 690, 1685, 1686, 1415 ];
+    int[] suggested = [ 6, 9, 13, 24, 42, 60, 66, 686, 690, 1685, 1686, 113 ];
     return Results.Json(new { results, suggested });
 });
 

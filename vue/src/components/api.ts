@@ -112,7 +112,7 @@ export async function getElectionTraits(regionId: string) : Promise<ElectionTrai
         .map((trait: any) => ({
             ...trait,
             type: 'election',
-            active: true,
+            active: trait.electionId == 44,
         }))
 }
 

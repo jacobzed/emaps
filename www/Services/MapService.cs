@@ -1,4 +1,12 @@
-﻿using System.Data;
+﻿/*
+
+Copyright (c) 2025 Jacob Zielinski
+Licensed under a source-available license. See LICENSE file for details.
+
+*/
+
+
+using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;

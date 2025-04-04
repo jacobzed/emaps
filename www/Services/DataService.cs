@@ -1,4 +1,12 @@
-﻿using System.Data;
+﻿/*
+
+Copyright (c) 2025 Jacob Zielinski
+Licensed under a source-available license. See LICENSE file for details.
+
+*/
+
+
+using System.Data;
 using System.Text.Json.Serialization;
 using Dapper;
 
@@ -117,7 +125,7 @@ namespace EMapper.Services
                 AND map_id IS NOT NULL
                 AND (region_id = @region OR region_id IS NULL)
 
-                ORDER BY 1, 2
+                ORDER BY party, 1, 2
             ", new { region });
         }
 
