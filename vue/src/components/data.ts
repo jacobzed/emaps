@@ -43,7 +43,7 @@ const censusTraits = new Map<number, CensusTrait>();
  * Although we request a single trait (e.g. 2021 Fed Election, Green Party), all the other traits from the same
  * election are also loaded. The requested trait is used for styling map features.
   */
-export async function cacheElectionData(layer: MapLayer, trait: ElectionTrait): Promise<void> {
+export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): Promise<void> {
 
     // Some data may already be loaded, so we only request missing data.
     const missing = [];
@@ -92,9 +92,9 @@ export async function cacheElectionData(layer: MapLayer, trait: ElectionTrait): 
  * We request a single trait to use for styling map features along with a set of optional traits that may be
  * useful for displaying additional information in tooltips.
  */
-export async function cacheCensusData(layer: MapLayer, trait: CensusTrait, traits: CensusTrait[]): Promise<void> {
+export async function loadCensusData(layer: MapLayer, trait: CensusTrait, traits: CensusTrait[]): Promise<void> {
     // The trait cache is used as a lookup table for trait names and is needed for tooltip formatting.
-    await cacheCensusTraits();
+    await loadCensusTraits();
 
     // Ensure the requested trait is included in the list of traits to load
     if (!traits.includes(trait)) {
@@ -130,7 +130,7 @@ export async function cacheCensusData(layer: MapLayer, trait: CensusTrait, trait
     // Collect all the values for the requested trait and group them in quartiles
     const values = [];
     for (const group of censusData.values()) {
-        const row = group.find(r => r.t == trait.id);
+        const row = group.find(r => r.t == trait.id && geoIds.includes(r.g));
         if (row) {
             values.push(row.v);
         }
@@ -160,7 +160,7 @@ export function purgeCensusData() {
 }
 
 /** Load census traits and save them to the cache. */
-export async function cacheCensusTraits(): Promise<void> {
+export async function loadCensusTraits(): Promise<void> {
     // Census traits are loaded all at once
     if (censusTraits.size > 0)
         return;

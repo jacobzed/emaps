@@ -29,7 +29,7 @@ import { MapHelper } from './MapHelper';
 import type { Region, Feature, CensusTrait, ElectionTrait } from './api';
 import { getRegions, getCensusTraits, getElectionTraits, getBoundaries, getFeature, getIntersectingFeatures } from './api';
 import type { AnyTooltip } from './data';
-import { cacheElectionData, cacheCensusData, purgeCensusData, cacheCensusTraits, getTooltip } from './data';
+import { loadElectionData, loadCensusData, purgeCensusData, loadCensusTraits, getTooltip } from './data';
 
 /** The MapHelper instance doesn't need to be reactive. */
 let map: MapHelper;
@@ -71,7 +71,7 @@ export default {
       this.boundary = boundary;
       this.picker = '';
       const geojson = await getFeature(this.boundary.mapId, this.boundary.featureId);
-      // Convert the features to LineString geometry so the MapHelper displays them as polylines instead of polygons.
+      // Convert the Polygon features to LineString geometry so the MapHelper displays them as polylines.
       geojson.features.forEach((f: any) => {
         f.geometry.type = f.geometry.type.replace('Polygon', 'LineString');
       });
@@ -123,9 +123,9 @@ export default {
         return;
 
       if (this.trait.type == 'election') {
-        await cacheElectionData(layer, this.trait);
+        await loadElectionData(layer, this.trait);
       } else if (this.trait.type == 'census') {
-        await cacheCensusData(layer, this.trait, this.censusTraits.filter(t => t.active));
+        await loadCensusData(layer, this.trait, this.censusTraits.filter(t => t.active));
       }
 
       // The load functions above will have assigned the getStyle callback to the layer
