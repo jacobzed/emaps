@@ -20,7 +20,7 @@ export type MapFeature = google.maps.Polygon | google.maps.Polyline | google.map
  */
 export type MapFeatureStylingFunction = (feature: MapFeature, props: any) => google.maps.PolygonOptions | google.maps.PolylineOptions | google.maps.MarkerOptions;
 
-export type MapFeatureInfoFunction = (feature: MapFeature, props: any) => any;
+export type MapFeatureCallback = (feature: MapFeature, props: any) => void;
 
 /**
  * A map layer represents a collection of geographic features that can be toggled on/off and styled.
@@ -34,9 +34,7 @@ export type MapLayer = {
     type?: 'point' | 'polygon' | 'polyline';
     /** Function to customize google maps styling options for selected feature. */
     getStyle?: MapFeatureStylingFunction;
-    /** Function to get properties for selected feature. */
-    getInfo?: MapFeatureInfoFunction;
-    /** All geographic features.
+    /** Geographic features of the layer.
      * The following custom properties can be accessed via feature.get('...')
      * 'props' contains the feature's properties.
      * 'label' contains the feature's label.
@@ -48,7 +46,7 @@ export type MapLayer = {
     label?: string;
     /** Current visibility state of the layer. */
     visible: boolean;
-    /** Bounds of the layer. */
+    /** Bounds containing all features of the layer. */
     bounds: google.maps.LatLngBounds;
     /** All IDs of the features in the layer. */
     ids: string[];
@@ -57,7 +55,7 @@ export type MapLayer = {
 /**
  * Options for initializing a map layer.
  */
-export type MapLayerOptions = Pick<MapLayer, 'name' | 'getStyle' | 'getInfo' | 'label'>;
+export type MapLayerOptions = Pick<MapLayer, 'name' | 'label' | 'getStyle'>;
 
 
 

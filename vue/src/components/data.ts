@@ -22,7 +22,13 @@ export type CensusTooltip = {
     results: { id: number, name: string, value: string }[];
 }
 
-export type AnyTooltip = ElectionTooltip | CensusTooltip;
+export type Legend = {
+    //sum: number;
+    //median: number;
+    bins: { desc: string, color: string }[];
+}
+
+export type Tooltip = ElectionTooltip | CensusTooltip;
 
 /** A cache of election data.
  * Key = electionId-geoId
@@ -39,11 +45,11 @@ const censusData = new Map<string, CensusData[]>();
  */
 const censusTraits = new Map<number, CensusTrait>();
 
-/** Load election data and save it to the cache.
+/** Load election data and update the map layer.
  * Although we request a single trait (e.g. 2021 Fed Election, Green Party), all the other traits from the same
  * election are also loaded. The requested trait is used for styling map features.
   */
-export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): Promise<void> {
+export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): Promise<Legend> {
 
     // Some data may already be loaded, so we only request missing data.
     const missing = [];
@@ -68,10 +74,22 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
         });
     }
 
-    //const values = results.filter(r => r.p == trait.party).map(r => r.vp);
+    /*
+    // Collect all the values for the requested trait and group them in quartiles
+    const values = [];
+    for (const group of electionData.values()) {
+        const row = group.find(r => r.p == trait.party && geoIds.includes(r.g));
+        if (row) {
+            values.push(row.vp);
+        }
+    }
+    values.sort((a, b) => b - a);
+    */
+
     //const bins = getQuantiles(values, 4);
     const bins = [0.35, 0.25, 0.15, 0]; // fixed values are better for absolute comparisons like margin of victory
     const colors = getColorScheme(trait.party);
+    const legend = getLegend([100], [35, 25, 15, 0], colors, true);
 
     // Create a callback that map.refreshLayer will use for styling features
     layer.getStyle = (feature, props) => {
@@ -83,16 +101,18 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
 
         }
         //return { fillColor: row ? `hsl(240, 100%, ${row.pct * 100}%)` : '#ccc' };
-        return { fillColor: '#eee', fillOpacity: 0.5, strokeColor: '#eee' };
+        return { fillColor: '#eee', fillOpacity: 0.4, strokeColor: '#eee' };
     }
+
+    return legend;
 }
 
 
-/** Load census data and save it to the cache.
+/** Load census data and update the map layer.
  * We request a single trait to use for styling map features along with a set of optional traits that may be
  * useful for displaying additional information in tooltips.
  */
-export async function loadCensusData(layer: MapLayer, trait: CensusTrait, traits: CensusTrait[]): Promise<void> {
+export async function loadCensusData(layer: MapLayer, trait: CensusTrait, traits: CensusTrait[]): Promise<Legend> {
     // The trait cache is used as a lookup table for trait names and is needed for tooltip formatting.
     await loadCensusTraits();
 
@@ -136,9 +156,8 @@ export async function loadCensusData(layer: MapLayer, trait: CensusTrait, traits
         }
     }
     const bins = getQuantiles(values, 4);
-    //console.log(values,bins);
-    //const colors = ['#edf8fb','#b3cde3','#8c96c6','#88419d'];
     const colors = ['#88419d', '#8c96c6', '#b3cde3', '#edf8fb'];
+    const legend = getLegend(values, bins, colors, trait.isRate);
 
     // Create a callback that map.refreshLayer will use for styling features
     layer.getStyle = (feature, props) => {
@@ -149,9 +168,10 @@ export async function loadCensusData(layer: MapLayer, trait: CensusTrait, traits
             return { fillColor: color, fillOpacity: 0.7, strokeColor: color };
         }
         //return { fillColor: row ? `hsl(240, 100%, ${row.pct * 100}%)` : '#ccc' };
-        return { fillColor: '#eee', fillOpacity: 0.5, strokeColor: '#eee' };
+        return { fillColor: '#eee', fillOpacity: 0.4, strokeColor: '#eee' };
     }
 
+    return legend;
 }
 
 /** Purge the census data cache. Use after a new set of census traits is selected. */
@@ -167,17 +187,21 @@ export async function loadCensusTraits(): Promise<void> {
 
     const traits = await getCensusTraits();
     for (const trait of traits) {
-        censusTraits.set(trait.id, trait);
+        censusTraits.set(trait.id, { ...trait });
     }
 }
 
 /** Callback to retreive tooltip data when mouse hovers over a map feature. */
-export function getTooltip(props: any, trait: CensusTrait | ElectionTrait): AnyTooltip | null {
+export function getTooltip(props: any, trait: CensusTrait | ElectionTrait): Tooltip | null {
 
     if (trait.type == 'election') {
         const group = electionData.get(trait.electionId + '-' + props.id);
         if (group) {
-            return { type: 'election', title: props.id, results: group.map(r => ({ party: r.p, pct: r.vp, color: getPartyColor(r.p) })) };
+            return {
+                type: 'election',
+                title: props.id,
+                results: group.map(r => ({ party: r.p, pct: r.vp, color: getPartyColor(r.p) }))
+            };
         }
         return { type: 'election', title: props.id, results: [] };
     }
@@ -193,7 +217,7 @@ export function getTooltip(props: any, trait: CensusTrait | ElectionTrait): AnyT
                     return {
                         id: r.t,
                         name: trait.category ? trait.category + ': ' + trait.name : trait.name,
-                        value: trait.isRate ? r.v.toFixed(1) + '%' : r.v.toFixed(0)
+                        value: trait.isRate ? r.v.toFixed(1) + '%' : r.v.toFixed(0),
                     }
                 })
             };
@@ -217,6 +241,18 @@ function getQuantiles(values: number[], n: number): number[] {
     }
     quantiles.push(values[values.length - 1]);
     return quantiles;
+}
+
+/** Generate a legend to explain each color code. */
+function getLegend(values: number[], bins: number[], colors: string[], pct: boolean): Legend {
+    const info: Legend = { bins: [] };
+    for (let i = 0; i < bins.length; i++) {
+        const a = i == 0 ? values[0] : bins[i-1] - (pct ? 0.1 : 1);
+        const b = bins[i];
+        const desc = pct ? `${a.toFixed(1)}% - ${b.toFixed(1)}%` : `${a} - ${b}`;
+        info.bins.push({ desc, color: colors[i] });
+    }
+    return info;
 }
 
 

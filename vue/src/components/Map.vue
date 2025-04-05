@@ -28,7 +28,7 @@ e.g. electoral data will reference voting area (poll) maps
 import { MapHelper } from './MapHelper';
 import type { Region, Feature, CensusTrait, ElectionTrait } from './api';
 import { getRegions, getCensusTraits, getElectionTraits, getBoundaries, getFeature, getIntersectingFeatures } from './api';
-import type { AnyTooltip } from './data';
+import type { Tooltip, Legend } from './data';
 import { loadElectionData, loadCensusData, purgeCensusData, loadCensusTraits, getTooltip } from './data';
 
 /** The MapHelper instance doesn't need to be reactive. */
@@ -45,7 +45,8 @@ export default {
       censusTraits: [] as CensusTrait[],
       electionTraits: [] as ElectionTrait[],
       trait: null as CensusTrait | ElectionTrait | null,
-      tooltip: null as AnyTooltip | null,
+      legend: null as Legend | null,
+      tooltip: null as Tooltip | null,
     }
   },
   async mounted() {
@@ -123,9 +124,9 @@ export default {
         return;
 
       if (this.trait.type == 'election') {
-        await loadElectionData(layer, this.trait);
+        this.legend = await loadElectionData(layer, this.trait);
       } else if (this.trait.type == 'census') {
-        await loadCensusData(layer, this.trait, this.censusTraits.filter(t => t.active));
+        this.legend = await loadCensusData(layer, this.trait, this.censusTraits.filter(t => t.active));
       }
 
       // The load functions above will have assigned the getStyle callback to the layer
@@ -144,19 +145,8 @@ export default {
       return '&nbsp;'.repeat(count);
     }
   },
-  watch: {
-    trait: async function (value) {
-    }
-  },
   errorCaptured(err, instance, info) {
-    // Log the error
-    console.error('Error in Map component:', err);
-    console.error('Error info:', info);
-
-    // You can also show a user-friendly error message here
-    // For example, you could set a data property to display an error message
-
-    // Return false to prevent the error from propagating further
+    console.error('Error in Map component:', err, info);
     return false;
   }
 }
@@ -231,6 +221,12 @@ export default {
         <p v-if="tooltip.results.length == 0">No data available.</p>
       </div>
 
+      <div v-if="legend">
+        <p><strong>Legend</strong></p>
+        <div v-for="b in legend.bins" class="tooltip-item"><div class="legend" :style="{ backgroundColor: b.color }"></div>{{ b.desc }}</div>
+      </div>
+
+
     </div>
   </div>
 </template>
@@ -278,6 +274,15 @@ export default {
 .highlight {
   background-color: #ff0;
   font-weight: bold;
+}
+
+.legend {
+  width: 15px;
+  height: 15px;
+  background-color: #fff;
+  margin-right: 5px;
+  display: inline-block;
+  border: solid 1px #333;
 }
 
 </style>
