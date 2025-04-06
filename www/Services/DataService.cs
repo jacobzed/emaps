@@ -133,7 +133,8 @@ namespace EMapper.Services
         {
             if (query.GeoId.Length == 0)
                 throw new ArgumentException("At least one geoId must be provided");
-            if (query.GeoId.Length > 400)
+            // cities may have 1000+ geoIds e.g. Hamilton, ON
+            if (query.GeoId.Length > 2000)
                 throw new ArgumentException("Too many geoIds");
 
             return await db.QueryAsync<ElectionData>(@"
@@ -188,7 +189,7 @@ namespace EMapper.Services
         {
             if (query.GeoId.Length == 0)
                 throw new ArgumentException("At least one geoId must be provided");
-            if (query.GeoId.Length > 400)
+            if (query.GeoId.Length > 2000)
                 throw new ArgumentException("Too many geoIds");
 
             if (query.TraitId.Length == 0)

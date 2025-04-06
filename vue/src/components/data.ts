@@ -93,12 +93,16 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
 
     // Create a callback that map.refreshLayer will use for styling features
     layer.getStyle = (feature, props) => {
-        const row = electionData.get(trait.electionId + '-' + props.id)?.find(r => r.p == trait.party);
+        const key = trait.electionId + '-' + props.id;
+        const row = electionData.get(key)?.find(r => r.p === trait.party);
         if (row) {
             const i = bins.findIndex(q => row.vp >= q);
             const color = colors[i];
             return { fillColor: color, fillOpacity: 0.7, strokeColor: color };
 
+        }
+        else {
+            console.log('missing data for', key, trait.party);
         }
         //return { fillColor: row ? `hsl(240, 100%, ${row.pct * 100}%)` : '#ccc' };
         return { fillColor: '#eee', fillOpacity: 0.4, strokeColor: '#eee' };

@@ -80,7 +80,6 @@ app.UseExceptionHandler(errorApp =>
 });
 
 
-/*
 // Use middleware to add a cache control header to all API responses
 app.Use(async (context, next) =>
 {
@@ -95,7 +94,6 @@ app.Use(async (context, next) =>
 
     await next();
 });
-*/
 
 
 
@@ -147,7 +145,7 @@ app.MapGet("/api/census/trait", async ([FromServices] DataService dataService) =
     // To simplify the first iteration of the UI, I'm going to hardcode the censusId
     var censusId = 1;
     var results = await dataService.GetCensusTraits(censusId);
-    int[] suggested = [ 6, 9, 13, 24, 42, 60, 66, 686, 690, 1685, 1686, 113 ];
+    int[] suggested = [ 1, 9, 13, 24, 42, 60, 66, 686, 690, 1685, 1686, 113 ];
     return Results.Json(new { results, suggested });
 });
 

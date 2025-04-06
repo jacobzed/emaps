@@ -45,7 +45,7 @@ namespace EMapper.Services
                 where map_id = 12 and region_id = @region
 
                 union
-                select map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
+                select map_id as mapid, id as featureid, 'Fed ED: ' || name as name, 1
                 from map_shp
                 where map_id = 20 and region_id = @region
 

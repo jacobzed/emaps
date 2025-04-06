@@ -13,7 +13,8 @@
     "copy-to-wwwroot": "xcopy /E /I /Y dist\\assets ..\\www\\wwwroot"
   },
   "dependencies": {
-    "vue": "^3.5.13"
+    "vue": "^3.5.13",
+    "vue-toast-notification": "^3.1.3"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",

@@ -10,7 +10,6 @@ Licensed under a source-available license. See LICENSE file for details.
 import { MapLabel } from './MapLabel';
 import { PoleLabelPlacement } from './PoleLabelPlacement';
 
-
 export type MapFeature = google.maps.Polygon | google.maps.Polyline | google.maps.Marker;
 
 /**
@@ -58,6 +57,9 @@ export type MapLayer = {
 export type MapLayerOptions = Pick<MapLayer, 'name' | 'label' | 'getStyle'>;
 
 
+/** Shared state to keep track of the last location for the map. */
+let lastLocation: any = null;
+
 
 /**
  * Helper class for managing map layer visibility, styling, and event handling.
@@ -66,8 +68,8 @@ export type MapLayerOptions = Pick<MapLayer, 'name' | 'label' | 'getStyle'>;
 export class MapHelper {
     private map: google.maps.Map;
     private layers: MapLayer[] = [];
-    public onMouseOver: (props: any) => void = () => {};
-    public onMouseOut: (props: any) => void = () => {};
+    public onMouseOver: (props: any) => void = () => { };
+    public onMouseOut: (props: any) => void = () => { };
 
     private defaultPolygonOptions: google.maps.PolygonOptions = {
         strokePosition: google.maps.StrokePosition.INSIDE,
@@ -98,6 +100,10 @@ export class MapHelper {
             zoom: 12, // 22=max zoom in, 18=max useful zoom in, 12=city scale zoom, 4=country scale zoom
             // scroll wheel zoom
             scrollwheel: true,
+            // disable satellite map type
+            mapTypeControl: false,
+            // disable fullscreen control
+            fullscreenControl: false,
             // disable most labels since they create visual clutter
             // https://developers.google.com/maps/documentation/javascript/style-reference#stylers
             styles: [
@@ -120,14 +126,21 @@ export class MapHelper {
 
         });
 
-        this.map.addListener('zoom_changed', () => {
-            const zoom = this.map.getZoom() ?? 0;
-            //console.log(zoom);
-        });
+        if (lastLocation) {
+            this.map.setZoom(lastLocation.zoom);
+            this.map.setCenter(lastLocation.center);
+        }
+
+        this.attachBoundsChangedHandlers();
+    }
+
+    destroy() {
+        google.maps.event.clearInstanceListeners(this.map);
+        this.clearLayers();
     }
 
     /** Remove all layers from the map. */
-    clearLayers() {
+    private clearLayers() {
         for (const layer of this.layers) {
             this.removeLayer(layer);
         }
@@ -149,18 +162,19 @@ export class MapHelper {
         for (const f of layer.features) {
             f.setMap(null);
             f.unbindAll();
+            google.maps.event.clearInstanceListeners(f);
         }
         this.layers = this.layers.filter(l => l !== layer);
     }
 
     /** Add a layer to the map. If a layer with the same name already exists, it will be replaced.
      * The layer will be hidden by default. */
-    addLayer(options: MapLayerOptions, geojson: any) : MapLayer {
+    addLayer(options: MapLayerOptions, geojson: any): MapLayer {
         const labelPlacer = new PoleLabelPlacement(1); // 0.001 degrees precision
 
-        const oldLayer = this.findLayer(options.name);
-        if (oldLayer) {
-            this.removeLayer(oldLayer);
+        const old = this.findLayer(options.name);
+        if (old) {
+            this.removeLayer(old);
         }
 
         const layer: MapLayer = {
@@ -349,8 +363,6 @@ export class MapHelper {
         }
     }
 
-
-
     /** Show a layer on the map. If the layer is a polygon, hide all other polygon layers. */
     showLayer(layer: MapLayer) {
 
@@ -404,7 +416,40 @@ export class MapHelper {
             if (layer.getStyle) {
                 f.setOptions(layer.getStyle(f, props) as google.maps.PolygonOptions);
             }
+            else {
+                console.warn('No styling function for layer', layer.name);
+            }
         }
+    }
+
+    /** Attach bounds_changed handlers to keep navigation synchronized for other instances in the same window */
+    private attachBoundsChangedHandlers() {
+        const locEventName = 'map-bounds-changed';
+        let locMouseOver = false;
+        let locTimer = 0;
+        // Keep track of the mouse so that we don't trigger events in a loop on our own instance
+        this.map.addListener('drag', () => { locMouseOver = true; });
+        this.map.addListener('mouseover', () => { locMouseOver = true; });
+        this.map.addListener('mouseout', () => { locMouseOver = false; });
+        this.map.addListener('bounds_changed', () => {
+            if (locMouseOver) {
+                const zoom = this.map.getZoom();
+                const center = this.map.getCenter();
+                window.clearTimeout(locTimer);
+                lastLocation = { zoom, center };
+                // Debounce needed because of potential fast invocations when dragging
+                locTimer = setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent(locEventName, { detail: { zoom, center } }));
+                }, 100);
+            }
+        });
+        // Move the map when another instance has sent us bounds_changed event
+        window.addEventListener(locEventName, (e: any) => {
+            if (!locMouseOver) {
+                this.map.setCenter(e.detail.center);
+                this.map.setZoom(e.detail.zoom);
+            }
+        });
     }
 
     /** Calculate the center point of a polygon. */
