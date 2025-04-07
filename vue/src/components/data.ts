@@ -58,18 +58,29 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
         const key = trait.electionId + '-' + g;
         if (!electionData.has(key)) {
             missing.push(g);
-            // Save a placeholder to prevent further load attempts if no data is available
-            electionData.set(key, []);
         }
     }
 
     // Load data for features that don't have data yet
     if (missing.length > 0) {
         const data = await getElectionData(trait.electionId, missing);
+
+        // Save a placeholder to prevent further load attempts if no data is available
+        // To avoid a race condition we must do this after the await call.
+        for (const g of missing) {
+            const key = trait.electionId + '-' + g;
+            if (!electionData.has(key)) {
+                electionData.set(key, []);
+            }
+        }
+
         data.forEach(row => {
             const key = trait.electionId + '-' + row.g;
             const group = electionData.get(key) ?? [];
-            group.push(row);
+            const existing = group.find(r => r.p === row.p);
+            if (!existing) {
+                group.push(row);
+            }
             electionData.set(key, group);
         });
     }
@@ -127,26 +138,37 @@ export async function loadCensusData(layer: MapLayer, trait: CensusTrait, traits
 
     // Some data may already be loaded, so we only request missing data.
     // Important: this only checks for geoId existence, not for traitId. We will need to wipe the cache
-    // if the requested traits change -- which is kind of a leaky abstraction but it's faster than
-    // checking for traitId existence.
+    // if the displayed traits change -- which is kind of a leaky abstraction but it's faster than
+    // checking if both geoId + traitId exist.
     const missing = [];
     const geoIds = layer.ids;
     for (const g of geoIds) {
         const key = g;
         if (!censusData.has(key)) {
             missing.push(g);
-            // Save a placeholder to prevent further load attempts if no data is available
-            censusData.set(key, []);
         }
     }
 
     // Load data for features that don't have data yet
     if (missing.length > 0) {
         const data = await getCensusData(traits.map(t => t.id), missing);
+
+        // Save a placeholder to prevent further load attempts if no data is available
+        // To avoid a race condition we must do this after the await call.
+        for (const g of missing) {
+            const key = g;
+            if (!censusData.has(key)) {
+                censusData.set(key, []);
+            }
+        }
+
         data.forEach(row => {
             const key = row.g;
             const group = censusData.get(key) ?? [];
-            group.push(row);
+            const existing = group.find(r => r.t === row.t);
+            if (!existing) {
+                group.push(row);
+            }
             censusData.set(key, group);
         });
     }
