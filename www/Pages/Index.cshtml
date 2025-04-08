@@ -1,13 +1,13 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Electoral Mapper";
+    ViewData["Title"] = "Electoral Maps";
 }
 
 @section Head {
     <script src="https://maps.googleapis.com/maps/api/js?key=@(Model.MapsApiKey)&libraries=maps,geometry"></script>
-    <script type="text/javascript" src="~/index.js" defer></script>
-    <link rel="stylesheet" href="~/index.css" />
+    <script type="text/javascript" src="~/static/index.js" defer></script>
+    <link rel="stylesheet" href="~/static/index.css" />
 }
 
 <div id="app"></div>

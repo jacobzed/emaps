@@ -14,6 +14,8 @@ public class IndexModel : PageModel
         _logger = logger;
 
         MapsApiKey = config["Secrets:MapsApiKey"] ?? "";
+        if (String.IsNullOrEmpty(MapsApiKey))
+            Console.Error.WriteLine("MapsApiKey is not set. Please set the MapsApiKey in appsettings.json.");
     }
 
     public void OnGet()

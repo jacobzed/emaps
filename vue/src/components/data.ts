@@ -28,6 +28,11 @@ export type Legend = {
     bins: { desc: string, color: string }[];
 }
 
+// let loadingCallback = (loading: boolean): void => { };
+// export function onLoading(callback: (loading: boolean) => void) {
+//     loadingCallback = callback;
+// }
+
 export type Tooltip = ElectionTooltip | CensusTooltip;
 
 /** A cache of election data.
@@ -266,17 +271,27 @@ function getQuantiles(values: number[], n: number): number[] {
         quantiles.push(values[Math.round((i + 1) * step)]);
     }
     quantiles.push(values[values.length - 1]);
+    // Sometimes the data may be mostly zeros except for a few outliers
+    // Make sure the outliers aren't grouped with the zero values in the first bin
+    if (quantiles[0] === 0) {
+        quantiles[0] = 0.1;
+    }
     return quantiles;
 }
 
 /** Generate a legend to explain each color code. */
 function getLegend(values: number[], bins: number[], colors: string[], pct: boolean): Legend {
     const info: Legend = { bins: [] };
+    let last = 0;
     for (let i = 0; i < bins.length; i++) {
-        const a = i == 0 ? values[0] : bins[i-1] - (pct ? 0.1 : 1);
+        const a = i === 0 ? values[0] : bins[i-1] - (pct ? 0.1 : 1);
         const b = bins[i];
         const desc = pct ? `${a.toFixed(1)}% - ${b.toFixed(1)}%` : `${a} - ${b}`;
-        info.bins.push({ desc, color: colors[i] });
+        // Don't show empty bins (when data isn't distributed enough to be split into bins)
+        if (last !== b) {
+            info.bins.push({ desc, color: colors[i] });
+        }
+        last = b;
     }
     return info;
 }

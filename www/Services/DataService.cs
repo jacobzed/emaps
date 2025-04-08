@@ -179,7 +179,7 @@ namespace EMapper.Services
             return await db.QueryAsync<CensusTrait>(@"
                 SELECT *, is_rate as isRate, 10 as mapId
                 FROM census_trait
-                WHERE census_id = @censusId 
+                WHERE census_id = 1
                 AND is_hidden = false
                 ORDER BY id
             ", new { censusId });

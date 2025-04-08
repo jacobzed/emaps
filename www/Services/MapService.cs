@@ -44,10 +44,11 @@ namespace EMapper.Services
                 from map_shp
                 where map_id = 12 and region_id = @region
 
+                -- get 343 ridings from the 2023 federal representation order
                 union
-                select map_id as mapid, id as featureid, 'Fed ED: ' || name as name, 1
+                select map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
                 from map_shp
-                where map_id = 20 and region_id = @region
+                where map_id = 30 and region_id = @region
 
                 order by 4, 3
             ", new { region });

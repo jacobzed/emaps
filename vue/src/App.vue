@@ -37,6 +37,7 @@ export default {
     data() {
         return {
             picker: '',
+            loading: false,
             regions: [] as Region[],
             region: undefined as Region | undefined,
             boundaries: [] as Feature[],
@@ -71,9 +72,9 @@ export default {
             document.title = boundary.name;
             this.picker = '';
             this.boundary = boundary;
-            (this.$refs.map1 as any).selectBoundary(boundary);
+            await (this.$refs.map1 as any).selectBoundary(boundary);
             if (this.$refs.map2) {
-                (this.$refs.map2 as any).selectBoundary(boundary);
+                await (this.$refs.map2 as any).selectBoundary(boundary);
             }
         },
         cloneBoundary() {
@@ -99,7 +100,7 @@ export default {
         },
     },
     errorCaptured(err, instance, info) {
-        this.showError('Error: ' + err);
+        this.showError(err);
         return false;
     },
 };
@@ -108,7 +109,7 @@ export default {
 <template>
     <header>
         <div>
-            <h1>Electoral Mapper</h1>
+            <h1>Electoral Maps .ca</h1>
         </div>
         <div>
             <a href="#" @click.prevent="picker = 'region'" class="button">{{ region ? region.name : "Select..." }}</a>
@@ -120,7 +121,14 @@ export default {
             <input type="checkbox" v-model="dual" class="toggler" title="Toggle split view map mode" />
         </div>
 
+        <div style="flex: 1; text-align: right;">
+            <a href="#" @click.prevent="picker = 'about'">About</a>
+        </div>
+
     </header>
+    <div class="loading" v-show="loading">
+        <p>Loading...</p>
+    </div>
     <div class="maps">
         <Map
             ref="map1"
@@ -128,6 +136,7 @@ export default {
             :censusTraits="censusTraits.filter((t) => t.active)"
             :electionTraits="electionTraits"
             @customize="picker = 'trait'"
+            @loading="loading = $event"
         />
         <Map
             ref="map2"
@@ -135,7 +144,8 @@ export default {
             :censusTraits="censusTraits.filter((t) => t.active)"
             :electionTraits="electionTraits"
             @customize="picker = 'trait'"
-            @ready="cloneBoundary"
+            @mounted="cloneBoundary"
+            @loading="loading = $event"
             v-if="dual"
         />
     </div>
@@ -152,7 +162,7 @@ export default {
     </div>
 
     <div class="dialog" v-show="picker == 'boundary'">
-        <p>Select a boundary (cities use census subdivisions which generally correspond to municipal boundaries): </p>
+        <p>Select a boundary (ridings use new 2023 representation order, cities use census subdivisions which generally correspond to municipal boundaries): </p>
         <ul class="cols">
             <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
                 <a href="#" @click.prevent="selectBoundary(b)">{{ b.name }}</a>
@@ -177,6 +187,17 @@ export default {
             </li>
         </ul>
     </div>
+
+    <div class="dialog" v-show="picker == 'about'">
+
+        <p>Census data is provided by Statistics Canada. 2023. Census Profile. 2021 Census of Population. Statistics Canada Catalogue number 98-316-X2021001. Ottawa. Released November 15, 2023.</p>
+        <p>Reproduced and distributed on an "as is" basis with the permission of Statistics Canada.</p>
+
+        <p>I can be reached at contact@electoralmaps.ca</p>
+
+        <p><button type="button" @click="picker = ''">Close</button></p>
+
+    </div>
 </template>
 
 <style>
@@ -195,5 +216,21 @@ export default {
     font-size: 0.8em;
     color: #888;
     margin-right: 5px;
+}
+
+.loading {
+    display: flex;
+    position: fixed;
+    top: 30%;
+    left: 0;
+    right: 0;
+    height: 200px;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.7);
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 4em;
+    transition: all 0.5s;
 }
 </style>

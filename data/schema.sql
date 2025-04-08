@@ -17,6 +17,48 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: census2; Type: DATABASE; Schema: -; Owner: postgres
+--
+
+CREATE DATABASE census2 WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en_US.UTF-8';
+
+
+ALTER DATABASE census2 OWNER TO postgres;
+
+\connect census2
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: census2; Type: DATABASE PROPERTIES; Schema: -; Owner: postgres
+--
+
+ALTER DATABASE census2 SET search_path TO '$user', 'main', 'public';
+
+
+\connect census2
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
 -- Name: etl; Type: SCHEMA; Schema: -; Owner: postgres
 --
 
@@ -51,49 +93,6 @@ COMMENT ON EXTENSION postgis IS 'PostGIS geometry and geography spatial types an
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
-
---
--- Name: shp; Type: TABLE; Schema: etl; Owner: postgres
---
-
-CREATE TABLE etl.shp (
-    gid integer NOT NULL,
-    objectid double precision,
-    pd_nbr_sfx character varying(6),
-    pd_type character varying(1),
-    fed_num double precision,
-    adv_poll_n character varying(10),
-    pd_num double precision,
-    shape_leng numeric,
-    shape_area numeric,
-    pd_num_sfx character varying(50),
-    geom public.geometry(MultiPolygon,4326)
-);
-
-
-ALTER TABLE etl.shp OWNER TO postgres;
-
---
--- Name: shp_gid_seq; Type: SEQUENCE; Schema: etl; Owner: postgres
---
-
-CREATE SEQUENCE etl.shp_gid_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE etl.shp_gid_seq OWNER TO postgres;
-
---
--- Name: shp_gid_seq; Type: SEQUENCE OWNED BY; Schema: etl; Owner: postgres
---
-
-ALTER SEQUENCE etl.shp_gid_seq OWNED BY etl.shp.gid;
-
 
 --
 -- Name: census; Type: TABLE; Schema: main; Owner: postgres
@@ -266,21 +265,6 @@ CREATE TABLE main.region (
 ALTER TABLE main.region OWNER TO postgres;
 
 --
--- Name: shp gid; Type: DEFAULT; Schema: etl; Owner: postgres
---
-
-ALTER TABLE ONLY etl.shp ALTER COLUMN gid SET DEFAULT nextval('etl.shp_gid_seq'::regclass);
-
-
---
--- Name: shp shp_pkey; Type: CONSTRAINT; Schema: etl; Owner: postgres
---
-
-ALTER TABLE ONLY etl.shp
-    ADD CONSTRAINT shp_pkey PRIMARY KEY (gid);
-
-
---
 -- Name: census_data census_data_pkey; Type: CONSTRAINT; Schema: main; Owner: postgres
 --
 
@@ -347,17 +331,17 @@ ALTER TABLE ONLY main.census_trait
 
 
 --
--- Name: shp_geom_idx; Type: INDEX; Schema: etl; Owner: postgres
+-- Name: idx_census_data_filter; Type: INDEX; Schema: main; Owner: postgres
 --
 
-CREATE INDEX shp_geom_idx ON etl.shp USING gist (geom);
+CREATE INDEX idx_census_data_filter ON main.census_data USING btree (census_id, trait_id, geo_type, geo_id);
 
 
 --
--- Name: census_data_ix_trait; Type: INDEX; Schema: main; Owner: postgres
+-- Name: idx_election_data_filter; Type: INDEX; Schema: main; Owner: postgres
 --
 
-CREATE INDEX census_data_ix_trait ON main.census_data USING btree (census_id, trait_id) WITH (deduplicate_items='true');
+CREATE INDEX idx_election_data_filter ON main.election_data USING btree (election_id, (((ed_id || '-'::text) || va_id)));
 
 
 --

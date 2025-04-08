@@ -83,7 +83,7 @@ export class MapHelper {
     private defaultPolylineOptions: google.maps.PolylineOptions = {
         strokeColor: 'black',
         strokeWeight: 3,
-        zIndex: 0,
+        zIndex: 2,
     }
 
     private defaultHighlightOptions: google.maps.PolygonOptions = {
@@ -415,9 +415,6 @@ export class MapHelper {
             const props = f.get('props');
             if (layer.getStyle) {
                 f.setOptions(layer.getStyle(f, props) as google.maps.PolygonOptions);
-            }
-            else {
-                console.warn('No styling function for layer', layer.name);
             }
         }
     }

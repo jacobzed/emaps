@@ -31,7 +31,7 @@ export default {
       required: true
     }
   },
-  emits: ['customize', 'ready'],
+  emits: ['customize', 'mounted', 'loading', 'idle'],
   data: function () {
     return {
       trait: null as CensusTrait | ElectionTrait | null,
@@ -40,13 +40,20 @@ export default {
       boundary: null as Feature | null,
     }
   },
+  setup() {
+    // This setup is used to create a non-reactive map reference.
+    // Putting the map reference in data() and making it reactive creates subtle bugs
+    return {
+      //map: shallowRef<MapHelper>(null!),
+      map: null! as MapHelper,
+    }
+  },
   async mounted() {
     console.log('creating map instance...')
-    // We don't want the map to be reactive! For now ignore the typescript errors...
-    this.map = new MapHelper(this.$refs.map as HTMLElement);
+    this.map = new MapHelper(this.$refs.mapdiv as HTMLElement);
     this.map.onMouseOver = this.onMouseOver;
     this.map.onMouseOut = this.onMouseOut;
-    this.$emit('ready');
+    this.$emit('mounted');
   },
   unmounted() {
     console.log('destroying map instance...')
@@ -99,14 +106,17 @@ export default {
     async loadData() {
       const layer = this.map.activeLayer();
       //console.log('loading data for trait', this.trait, layer);
-      if (!this.trait || !this.boundary || !layer)
+      if (!this.boundary || !this.trait || !layer)
         return;
 
+
+      this.$emit('loading', true);
       if (this.trait.type == 'election') {
         this.legend = await loadElectionData(layer, this.trait);
       } else if (this.trait.type == 'census') {
         this.legend = await loadCensusData(layer, this.trait, this.censusTraits.filter(t => t.active));
       }
+      this.$emit('loading', false);
 
       // The load functions above will have assigned the getStyle callback to the layer
       this.map.refreshLayer(layer);
@@ -125,7 +135,7 @@ export default {
 <template>
 
   <div class="map">
-    <div ref="map"></div>
+    <div ref="mapdiv"></div>
     <div>
       <slot></slot>
 

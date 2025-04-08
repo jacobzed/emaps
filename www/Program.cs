@@ -44,7 +44,7 @@ if (!app.Environment.IsDevelopment())
     //app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
@@ -83,7 +83,7 @@ app.UseExceptionHandler(errorApp =>
 // Use middleware to add a cache control header to all API responses
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/api"))
+    if (context.Request.Path.StartsWithSegments("/api") && context.Response.StatusCode == 200)
     {
         context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
         {
@@ -157,7 +157,5 @@ app.MapPost("/api/census/data", async ([FromServices] DataService dataService, C
     var results = await dataService.GetCensusData(query);
     return Results.Json(new { results });
 });
-
-
 
 app.Run();
