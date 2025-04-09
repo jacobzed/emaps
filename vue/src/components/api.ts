@@ -64,6 +64,7 @@ export type ElectionData = {
 }
 
 export type Feature = {
+    regionId: string;
     mapId: number;
     featureId: number;
     name: string;
@@ -102,12 +103,18 @@ export async function getRegions() : Promise<Region[]> {
 export async function getBoundaries(regionId: string) : Promise<Feature[]> {
     const response = await fetch(api + '/api/region/' + regionId + '/features');
     const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
     return data.results;
 }
 
 export async function getElectionTraits(regionId: string) : Promise<ElectionTrait[]> {
     const response = await fetch(api + '/api/region/' + regionId + '/elections');
     const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
     return data.results
         .map((trait: any) => ({
             ...trait,
@@ -123,6 +130,9 @@ export async function getElectionTraits(regionId: string) : Promise<ElectionTrai
 export async function getFeature(mapId: number, featureId: number) : Promise<any> {
     const response = await fetch(api + '/api/map/' + mapId + '/' + featureId);
     const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
     return data;
 }
 
@@ -133,6 +143,9 @@ export async function getFeature(mapId: number, featureId: number) : Promise<any
 export async function getIntersectingFeatures(mapId: number, intersectMapId: number, intersectFeatureId: number) : Promise<any> {
     const response = await fetch(api + '/api/map/' + mapId + '/' + intersectMapId + '/' + intersectFeatureId);
     const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
     return data;
 }
 

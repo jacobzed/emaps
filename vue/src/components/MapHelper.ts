@@ -449,6 +449,7 @@ export class MapHelper {
         });
     }
 
+
     /** Calculate the center point of a polygon. */
     private getPolygonCenter(polygon: google.maps.Polygon): google.maps.LatLng {
         const bounds = new google.maps.LatLngBounds();

@@ -31,7 +31,7 @@ export default {
       required: true
     }
   },
-  emits: ['customize', 'mounted', 'loading', 'idle'],
+  emits: ['customize', 'mounted', 'loading'],
   data: function () {
     return {
       trait: null as CensusTrait | ElectionTrait | null,
@@ -93,7 +93,9 @@ export default {
         return;
       }
 
+      this.$emit('loading', true);
       const geojson = await getIntersectingFeatures(this.trait.mapId, this.boundary.mapId, this.boundary.featureId);
+      this.$emit('loading', false);
       if (!geojson.features) {
         console.error('No features found for ' + name);
         return;

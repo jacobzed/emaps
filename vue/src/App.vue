@@ -51,8 +51,16 @@ export default {
         try {
             this.censusTraits = await getCensusTraits();
             this.regions = await getRegions();
-            this.region = this.regions.find((r) => r.id == 'BC');
-            this.selectRegion(this.region!);
+
+            if (window.location.hash) {
+                await this.popState();
+            }
+            else {
+                const region = this.regions.find(r => r.id == 'BC');
+                this.selectRegion(region!);
+            }
+            window.addEventListener('popstate', this.popState);
+
         } catch (e) {
             this.showError(e);
         }
@@ -62,13 +70,16 @@ export default {
             console.error(error);
             $toast.open({ message: error, type: 'error', position: 'top-right' });
         },
-        async selectRegion(region: Region) {
+        async selectRegion(region: Region, clicked: boolean = false) {
             this.picker = '';
             this.region = region;
             this.boundaries = await getBoundaries(this.region.id);
             this.electionTraits = await getElectionTraits(this.region.id);
+            if (clicked) {
+                this.picker = 'boundary';
+            }
         },
-        async selectBoundary(boundary: Feature) {
+        async selectBoundary(boundary: Feature, clicked: boolean = false) {
             document.title = boundary.name;
             this.picker = '';
             this.boundary = boundary;
@@ -76,22 +87,53 @@ export default {
             if (this.$refs.map2) {
                 await (this.$refs.map2 as any).selectBoundary(boundary);
             }
+            if (clicked) {
+                this.pushState();
+            }
         },
         cloneBoundary() {
             if (this.boundary) {
-                (this.$refs.map1 as any).selectBoundary(this.boundary);
+                //(this.$refs.map1 as any).selectBoundary(this.boundary);
                 if (this.$refs.map2) {
                     (this.$refs.map2 as any).selectBoundary(this.boundary);
                 }
             }
         },
         async loadTraits() {
-            this.picker = "";
+            this.picker = '';
             purgeCensusData();
             (this.$refs.map1 as any).loadData();
             if (this.$refs.map2) {
                 (this.$refs.map2 as any).loadData();
             }
+        },
+        pushState() {
+            const url = `#/${this.region?.id}/${this.boundary?.name}`;
+            if (window.location.hash !== url) {
+                window.history.pushState(undefined, '', url);
+            }
+        },
+        async popState() {
+            this.picker = '';
+            const [_region, _boundary] = window.location.hash.substring(2).split('/').map(s => decodeURIComponent(s));
+            console.log('popState', _region, _boundary);
+
+            const region = this.regions.find(r => r.id === _region);
+            if (!region) {
+                return;
+            }
+            if (this.region !== region) {
+                await this.selectRegion(region);
+            }
+
+            const boundary = this.boundaries.find(b => b.name === _boundary);
+            if (!boundary) {
+                return;
+            }
+            if (this.boundary !== boundary) {
+                await this.selectBoundary(boundary);
+            }
+
         },
         indent(text: string) {
             // convert leading spaces to &nbsp;
@@ -156,7 +198,7 @@ export default {
         <p>Select a region:</p>
         <ul class="cols">
             <li v-for="r in regions" :key="r.id">
-                <a href="#" @click.prevent="selectRegion(r); picker = 'boundary';">{{ r.name }}</a>
+                <a href="#" @click.prevent="selectRegion(r, true);">{{ r.name }}</a>
             </li>
         </ul>
     </div>
@@ -165,7 +207,7 @@ export default {
         <p>Select a boundary (ridings use new 2023 representation order, cities use census subdivisions which generally correspond to municipal boundaries): </p>
         <ul class="cols">
             <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
-                <a href="#" @click.prevent="selectBoundary(b)">{{ b.name }}</a>
+                <a href="#" @click.prevent="selectBoundary(b, true)">{{ b.name }}</a>
             </li>
         </ul>
     </div>
