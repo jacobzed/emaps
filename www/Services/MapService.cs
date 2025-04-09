@@ -51,7 +51,7 @@ namespace EMapper.Services
                 from map_shp
                 where map_id = 30 and region_id = @region
 
-                order by 4, 3
+                order by 5, 4
             ", new { region });
         }
 

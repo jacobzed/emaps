@@ -137,6 +137,7 @@ export class MapHelper {
     destroy() {
         google.maps.event.clearInstanceListeners(this.map);
         this.clearLayers();
+        this.map = null as any;
     }
 
     /** Remove all layers from the map. */
@@ -441,12 +442,18 @@ export class MapHelper {
             }
         });
         // Move the map when another instance has sent us bounds_changed event
-        window.addEventListener(locEventName, (e: any) => {
+        const boundsHandler = (e: any) => {
+            // Window event may call this after disposal
+            if (this.map === null) {
+                window.removeEventListener(locEventName, boundsHandler);
+                return;
+            }
             if (!locMouseOver) {
                 this.map.setCenter(e.detail.center);
                 this.map.setZoom(e.detail.zoom);
             }
-        });
+        }
+        window.addEventListener(locEventName, boundsHandler);
     }
 
 
