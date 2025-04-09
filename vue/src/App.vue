@@ -168,6 +168,9 @@ export default {
         </div>
 
     </header>
+    <div v-if="!region || !boundary" style="padding: 20px; font-size: 1.5em;">
+        <p>To get started, use the dropdowns above to select a province and electoral district.</p>
+    </div>
     <div class="loading" v-show="loading">
         <p>Loading...</p>
     </div>
