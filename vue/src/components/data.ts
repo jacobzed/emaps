@@ -13,12 +13,14 @@ import type { MapLayer } from "./MapHelper";
 export type ElectionTooltip = {
     type: 'election';
     title: string;
+    notes?: string;
     results: { party: string, pct: number, color: string }[];
 }
 
 export type CensusTooltip = {
     type: 'census';
     title: string;
+    notes?: string;
     results: { id: number, name: string, value: string }[];
 }
 
@@ -228,9 +230,11 @@ export function getTooltip(props: any, trait: CensusTrait | ElectionTrait): Tool
     if (trait.type == 'election') {
         const group = electionData.get(trait.electionId + '-' + props.id);
         if (group) {
+            const merged = group.find(r => r.m)?.m;
             return {
                 type: 'election',
                 title: props.id,
+                notes: merged ? 'Note: some results for this poll were merged with poll ' + merged + '.' : '',
                 results: group.map(r => ({ party: r.p, pct: r.vp, color: getPartyColor(r.p) }))
             };
         }

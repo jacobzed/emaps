@@ -46,6 +46,9 @@ namespace EMapper.Services
         public int Votes { get; set; }
         [JsonPropertyName("vp")]
         public float Pct { get; set; }
+        [JsonPropertyName("m")]
+        public string? MergedId { get; set; }
+
     };
 
     public class ElectionDataQuery
@@ -138,7 +141,7 @@ namespace EMapper.Services
                 throw new ArgumentException("Too many geoIds");
 
             return await db.QueryAsync<ElectionData>(@"
-                SELECT election_id as electionId, ed_id || '-' || va_id as geoId, party, candidate, votes, pct
+                SELECT election_id as electionId, ed_id || '-' || va_id as geoId, party, candidate, votes, pct, merged_id as mergedId
                 FROM election_data
                 WHERE election_id = @electionId
                 AND ed_id || '-' || va_id = ANY(@geoId)

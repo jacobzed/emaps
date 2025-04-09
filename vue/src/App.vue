@@ -142,6 +142,7 @@ export default {
         },
     },
     errorCaptured(err, instance, info) {
+        this.loading = false;
         this.showError(err);
         return false;
     },
@@ -220,13 +221,13 @@ export default {
             <p><input type="button" value="Save changes..." @click.prevent="loadTraits()" /></p>
         </div>
         <ul>
-            <li>Election Traits:</li>
+            <li><strong>Election Traits:</strong></li>
             <li v-for="t in electionTraits">
                 <label><input type="checkbox" v-model="t.active" />{{ t.name }}</label>
             </li>
         </ul>
         <ul>
-            <li>Census Traits:</li>
+            <li><strong>Census Traits:</strong></li>
             <li v-for="t in censusTraits">
                 <label><input type="checkbox" v-model="t.active" /><span class="trait-id">{{ t.id }}</span><span v-html="indent(t.name)"></span>{{ t.name }}</label>
             </li>

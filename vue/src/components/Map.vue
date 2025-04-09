@@ -138,19 +138,20 @@ export default {
 
   <div class="map">
     <div ref="mapdiv"></div>
-    <div>
+    <div v-show="boundary">
       <slot></slot>
 
       <div class="radio-list" v-show="boundary && !tooltip">
+        <p><a href="#" @click.prevent="$emit('customize')">Customize layers...</a></p>
         <label v-for="t in electionTraits.filter(t => t.active)"><input type="radio" v-model="trait" :value="t"
             @click="selectTrait(t)">{{ t.name }}</label>
         <label v-for="t in censusTraits.filter(t => t.active)"><input type="radio" v-model="trait" :value="t"
             @click="selectTrait(t)"><span v-if="t.category" v-bind:title="'#' + t.id">{{ t.category }}: </span>{{ t.name }}</label>
-        <p><a href="#" @click.prevent="$emit('customize')">Customize layers...</a></p>
       </div>
 
       <div v-if="tooltip && tooltip.type == 'election'">
         <p><strong>{{ tooltip.title }}</strong></p>
+        <p class="notes">{{ tooltip.notes }}</p>
         <div v-for="r in tooltip.results" class="tooltip-item">
           <div>{{ r.party }} ({{ (r.pct * 100).toFixed(1) }}%)</div>
           <div class="tooltip-chart">
@@ -223,5 +224,10 @@ export default {
   margin-right: 5px;
   display: inline-block;
   border: solid 2px #333;
+}
+
+.notes {
+  font-size: 0.9em;
+  color: #666;
 }
 </style>

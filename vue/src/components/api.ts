@@ -51,6 +51,7 @@ export type ElectionData = {
     candidate: string;
     votes: number;
     pct: number;
+    mergedId: string;
 }
 */
 
@@ -61,6 +62,7 @@ export type ElectionData = {
     c: string;
     v: number;
     vp: number;
+    m: string;
 }
 
 export type Feature = {
