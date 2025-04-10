@@ -233,7 +233,7 @@ export function getTooltip(props: any, trait: CensusTrait | ElectionTrait): Tool
             const merged = group.find(r => r.m)?.m;
             return {
                 type: 'election',
-                title: props.id,
+                title: props.name || props.id,
                 notes: merged ? 'Note: some results for this poll were merged with poll ' + merged + '.' : '',
                 results: group.map(r => ({ party: r.p, pct: r.vp, color: getPartyColor(r.p) }))
             };

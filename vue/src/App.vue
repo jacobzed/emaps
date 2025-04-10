@@ -50,13 +50,15 @@ export default {
     async mounted() {
         try {
             this.censusTraits = await getCensusTraits();
+            this.refreshPreferredCensusTraits();
             this.regions = await getRegions();
 
             if (window.location.hash) {
                 await this.popState();
             }
             else {
-                const region = this.regions.find(r => r.id == 'BC');
+                const last = localStorage.getItem('region') || 'BC';
+                const region = this.regions.find(r => r.id == last);
                 this.selectRegion(region!);
             }
             window.addEventListener('popstate', this.popState);
@@ -75,9 +77,11 @@ export default {
             this.region = region;
             this.boundaries = await getBoundaries(this.region.id);
             this.electionTraits = await getElectionTraits(this.region.id);
+            this.refreshPreferredElectionTraits();
             if (clicked) {
                 this.picker = 'boundary';
             }
+            localStorage.setItem('region', region.id);
         },
         async selectBoundary(boundary: Feature, clicked: boolean = false) {
             document.title = boundary.name;
@@ -99,13 +103,43 @@ export default {
                 }
             }
         },
-        async loadTraits() {
+        async selectTraits() {
             this.picker = '';
+            this.savePreferredCensusTraits();
+            this.savePreferredElectionTraits();
             purgeCensusData();
             (this.$refs.map1 as any).loadData();
             if (this.$refs.map2) {
                 (this.$refs.map2 as any).loadData();
             }
+        },
+        savePreferredCensusTraits() {
+            const selected = this.censusTraits.filter(t => t.active).map(t => t.id);
+            localStorage.setItem('censusTraits', JSON.stringify(selected));
+        },
+        refreshPreferredCensusTraits() {
+            const last = localStorage.getItem('censusTraits');
+            if (!last) {
+                return;
+            }
+            const selected = JSON.parse(last);
+            this.censusTraits.forEach(t => {
+                t.active = selected.includes(t.id);
+            });
+        },
+        savePreferredElectionTraits() {
+            const selected = this.electionTraits.filter(t => t.active).map(t => t.name);
+            localStorage.setItem('electionTraits', JSON.stringify(selected));
+        },
+        refreshPreferredElectionTraits() {
+            const last = localStorage.getItem('electionTraits');
+            if (!last) {
+                return;
+            }
+            const selected = JSON.parse(last);
+            this.electionTraits.forEach(t => {
+                t.active = selected.includes(t.name);
+            });
         },
         pushState() {
             const url = `#/${this.region?.id}/${this.boundary?.name}`;
@@ -218,18 +252,18 @@ export default {
 
     <div class="dialog" v-show="picker == 'trait'">
         <div style="position: sticky; top: -20px; background-color: #fff; z-index: 1; padding: 10px 0;">
-            <p><input type="button" value="Save Changes..." @click.prevent="loadTraits()" /></p>
+            <p><input type="button" value="Save Changes..." @click.prevent="selectTraits()" /></p>
         </div>
         <ul>
             <li><strong>Election Traits:</strong></li>
             <li v-for="t in electionTraits">
-                <label><input type="checkbox" v-model="t.active" />{{ t.name }}</label>
+                <label><input type="checkbox" v-model="t.active" :key="t.name" />{{ t.name }}</label>
             </li>
         </ul>
         <ul>
             <li><strong>Census Traits:</strong></li>
             <li v-for="t in censusTraits">
-                <label><input type="checkbox" v-model="t.active" /><span class="trait-id">{{ t.id }}</span><span v-html="indent(t.name)"></span>{{ t.name }}</label>
+                <label><input type="checkbox" v-model="t.active" :key="t.id" /><span class="trait-id">{{ t.id }}</span><span v-html="indent(t.name)"></span>{{ t.name }}</label>
             </li>
         </ul>
     </div>
