@@ -116,6 +116,12 @@ app.MapGet("/api/region/{region}/features", async ([FromServices] MapService map
     return Results.Json(new { results });
 });
 
+app.MapGet("/api/location/features", async ([FromServices] MapService mapService, double lat, double lng) =>
+{
+    var results = await mapService.GetLatLngFeatures(lat, lng);
+    return Results.Json(new { results });
+});
+
 app.MapGet("/api/region/{region}/elections", async ([FromServices] DataService dataService, string region) =>
 {
     var results = await dataService.GetRegionElectionTraits(region);

@@ -456,6 +456,13 @@ export class MapHelper {
         window.addEventListener(locEventName, boundsHandler);
     }
 
+    getCenter(): google.maps.LatLng {
+        return this.map.getCenter()!;
+    }
+
+    getZoom(): number {
+        return this.map.getZoom()!;
+    }
 
     /** Calculate the center point of a polygon. */
     private getPolygonCenter(polygon: google.maps.Polygon): google.maps.LatLng {

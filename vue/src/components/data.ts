@@ -299,7 +299,7 @@ function getLegend(values: number[], bins: number[], colors: string[], pct: bool
         const b = bins[i];
         let desc = pct ? `${a.toFixed(1)}% to ${b.toFixed(1)}%` : `${a} to ${b}`;
         if (i == 0) {
-            desc = pct ? `> ${b.toFixed(1)}%` : `> ${b}`;
+            desc = pct ? `>= ${b.toFixed(1)}%` : `>= ${b}`;
         }
         if (i == bins.length - 1) {
             desc = pct ? `< ${a.toFixed(1)}%` : `< ${a}`;

@@ -22,7 +22,7 @@ e.g. electoral data will reference voting area (poll) maps
 
 <script lang="ts">
 import type { Region, Feature, CensusTrait, ElectionTrait } from "./components/api";
-import { getRegions, getCensusTraits, getElectionTraits, getBoundaries } from "./components/api";
+import { getRegions, getCensusTraits, getElectionTraits, getBoundaries, getBoundariesAt } from "./components/api";
 import { purgeCensusData } from "./components/data";
 import Map from "./components/Map.vue";
 import {useToast} from 'vue-toast-notification';
@@ -68,6 +68,9 @@ export default {
         }
     },
     methods: {
+        showInfo: function (error: any) {
+            $toast.open({ message: error, type: 'info', position: 'top-right' });
+        },
         showError: function (error: any) {
             console.error(error);
             $toast.open({ message: error, type: 'error', position: 'top-right' });
@@ -111,6 +114,18 @@ export default {
             (this.$refs.map1 as any).loadData();
             if (this.$refs.map2) {
                 (this.$refs.map2 as any).loadData();
+            }
+        },
+        async selectLocation() {
+            const location = (this.$refs.map1 as any).getLocation();
+            const boundaries = await getBoundariesAt(location);
+            const boundary = boundaries.find(b => b.name.includes('Riding'));
+            if (boundary) {
+                await this.selectRegion(this.regions.find(r => r.id == boundary.regionId)!);
+                await this.selectBoundary(boundary);
+            }
+            else {
+                this.showError('No riding found at your current location.');
             }
         },
         savePreferredCensusTraits() {
@@ -208,7 +223,8 @@ export default {
             <input type="checkbox" v-model="dual" class="toggler" title="Toggle split view map mode" />
         </div>
 
-        <div style="flex: 1; text-align: right;">
+        <div style="flex: 1; display: flex; gap: 10px; justify-content: right;">
+            <a href="#" @click.prevent="selectLocation">Find Nearest Riding</a>
             <a href="#" @click.prevent="picker = 'about'">About</a>
         </div>
 

@@ -130,6 +130,11 @@ export default {
     onMouseOut(props: any) {
       this.tooltip = null;
     },
+    getLocation() {
+      const center = this.map.getCenter();
+      const zoom = this.map.getZoom();
+      return { lat: center.lat(), lng: center.lng(), zoom };
+    },
   },
 }
 </script>

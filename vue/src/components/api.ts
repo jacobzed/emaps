@@ -113,6 +113,15 @@ export async function getBoundaries(regionId: string) : Promise<Feature[]> {
     return data.results;
 }
 
+export async function getBoundariesAt(pos: { lat: number, lng: number }) : Promise<Feature[]> {
+    const response = await fetch(api + '/api/location/features?lat=' + pos.lat.toFixed(5) + '&lng=' + pos.lng.toFixed(5));
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
+    return data.results;
+}
+
 export async function getElectionTraits(regionId: string) : Promise<ElectionTrait[]> {
     const response = await fetch(api + '/api/region/' + regionId + '/elections');
     const data = await response.json();

@@ -41,19 +41,44 @@ namespace EMapper.Services
         public async Task<IEnumerable<MapFeature>> GetRegionFeatures(string region)
         {
             return await db.QueryAsync<MapFeature>(@"
-                select region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 2
-                from map_shp
-                where map_id = 12 and region_id = @region
+                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 2
+                FROM map_shp
+                WHERE map_id = 12 
+                AND region_id = @region
 
                 -- get 343 ridings from the 2023 federal representation order
-                union
-                select region_id as regionid, map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
-                from map_shp
-                where map_id = 30 and region_id = @region
+                UNION
+                SELECT region_id as regionid, map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
+                FROM map_shp
+                WHERE map_id = 30 
+                AND region_id = @region
 
-                order by 5, 4
+                ORDER BY 5, 4
             ", new { region });
         }
+
+        /// <summary>
+        /// Get features at the given location.
+        /// </summary>
+        public async Task<IEnumerable<MapFeature>> GetLatLngFeatures(double lat, double lng)
+        {
+            return await db.QueryAsync<MapFeature>(@"
+                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 2
+                FROM map_shp
+                WHERE map_id = 12 
+                AND ST_Contains(geom, ST_SetSRID(ST_MakePoint(@lng, @lat), 4326))
+
+                -- get 343 ridings from the 2023 federal representation order
+                UNION
+                SELECT region_id as regionid, map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
+                FROM map_shp
+                WHERE map_id = 30
+                AND ST_Contains(geom, ST_SetSRID(ST_MakePoint(@lng, @lat), 4326))   
+
+                ORDER BY 5, 4
+            ", new { lat, lng });
+        }
+
 
         /// <summary>
         /// Get a single feature from the specified map.
