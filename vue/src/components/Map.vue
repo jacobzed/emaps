@@ -142,7 +142,7 @@ export default {
       <slot></slot>
 
       <div class="radio-list" v-show="boundary && !tooltip">
-        <p><a href="#" @click.prevent="$emit('customize')">Customize layers...</a></p>
+        <p><a href="#" @click.prevent="$emit('customize')" class="button">Customize layers...</a></p>
         <label v-for="t in electionTraits.filter(t => t.active)"><input type="radio" v-model="trait" :value="t"
             @click="selectTrait(t)">{{ t.name }}</label>
         <label v-for="t in censusTraits.filter(t => t.active)"><input type="radio" v-model="trait" :value="t"

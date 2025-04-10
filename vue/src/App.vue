@@ -155,10 +155,10 @@ export default {
             <h1>Electoral Maps .ca</h1>
         </div>
         <div>
-            <a href="#" @click.prevent="picker = 'region'" class="button">{{ region ? region.name : "Select..." }}</a>
+            <a href="#" @click.prevent="picker = 'region'" class="dropdown">{{ region ? region.name : "Select..." }}</a>
         </div>
         <div v-if="region">
-            <a href="#" @click.prevent="picker = 'boundary'" class="button">{{ boundary ? boundary.name : "Select..." }}</a>
+            <a href="#" @click.prevent="picker = 'boundary'" class="dropdown">{{ boundary ? boundary.name : "Select..." }}</a>
         </div>
         <div>
             <input type="checkbox" v-model="dual" class="toggler" title="Toggle split view map mode" />
@@ -218,7 +218,7 @@ export default {
 
     <div class="dialog" v-show="picker == 'trait'">
         <div style="position: sticky; top: -20px; background-color: #fff; z-index: 1; padding: 10px 0;">
-            <p><input type="button" value="Save changes..." @click.prevent="loadTraits()" /></p>
+            <p><input type="button" value="Save Changes..." @click.prevent="loadTraits()" /></p>
         </div>
         <ul>
             <li><strong>Election Traits:</strong></li>

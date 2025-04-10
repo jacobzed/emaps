@@ -45,7 +45,7 @@ header h1 {
       sans-serif;
 }
 
-.button {
+.dropdown {
   display: inline-block;
   padding: 5px 10px;
   border: 1px solid #ccc;
@@ -57,13 +57,31 @@ header h1 {
   padding-right: 25px;
 }
 
-.button::after {
+.dropdown::after {
   content: "▼";
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.8em;
+}
+
+.dropdown:hover {
+  text-decoration: underline;
+}
+
+button, input[type="button"], a.button {
+  background-color: var(--link-color);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:hover, input[type="button"]:hover, a.button:hover {
+  opacity: 0.9;
 }
 
 .dialog-bg {
@@ -133,14 +151,7 @@ header h1 {
   text-decoration: underline;
 }
 
-button, input[type="button"] {
-  background-color: var(--link-color);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-}
+
 
 /* https://www.htmhell.dev/adventcalendar/2023/2/ */
 .toggler { appearance: none; position: relative; display: inline-block; background: #ddd; height: 1.4rem; width: 2.75rem; vertical-align: middle; border-radius: 2rem; box-shadow: 0px 1px 3px #0003 inset; transition: 0.15s linear background; cursor: pointer; }
