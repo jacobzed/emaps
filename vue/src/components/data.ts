@@ -54,7 +54,8 @@ const censusTraits = new Map<number, CensusTrait>();
 
 /** Load election data and update the map layer.
  * Although we request a single trait (e.g. 2021 Fed Election, Green Party), all the other traits from the same
- * election are also loaded. The requested trait is used for styling map features.
+ * election are also loaded. The requested trait is used for styling map features and the other traits are used
+ * for tooltips.
   */
 export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): Promise<Legend> {
 
@@ -105,16 +106,22 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
     */
 
     //const bins = getQuantiles(values, 4);
-    const bins = [0.35, 0.25, 0.15, 0]; // fixed values are better for absolute comparisons like margin of victory
-    const colors = getColorScheme(trait.party);
-    const legend = getLegend([100], [35, 25, 15, 0], colors, true);
+    let bins = [0.35, 0.25, 0.15, 0]; // fixed values are better for absolute comparisons like margin of victory
+    let colors = getColorScheme(trait.party);
+    let legend = getLegend([100], [35, 25, 15, 0], colors, true);
+    const type = trait.name.substring(trait.name.lastIndexOf(' ') + 1);
+
+    if (type == 'Margin%') {
+        bins = [0.15, 0.05, -0.05, -1];
+        legend = getLegend([100], [15, 5, -5, -100], colors, true);
+    }
 
     // Create a callback that map.refreshLayer will use for styling features
     layer.getStyle = (feature, props) => {
         const key = trait.electionId + '-' + props.id;
         const row = electionData.get(key)?.find(r => r.p === trait.party);
         if (row) {
-            const i = bins.findIndex(q => row.vp >= q);
+            const i = type == 'Margin%' ? bins.findIndex(q => row.vm >= q) : bins.findIndex(q => row.vp >= q);
             const color = colors[i];
             return { fillColor: color, fillOpacity: 0.7, strokeColor: color };
 
@@ -288,9 +295,16 @@ function getLegend(values: number[], bins: number[], colors: string[], pct: bool
     const info: Legend = { bins: [] };
     let last = 0;
     for (let i = 0; i < bins.length; i++) {
-        const a = i === 0 ? values[0] : bins[i-1] - (pct ? 0.1 : 1);
+        const a = i === 0 ? values[0] : bins[i-1];
         const b = bins[i];
-        const desc = pct ? `${a.toFixed(1)}% - ${b.toFixed(1)}%` : `${a} - ${b}`;
+        let desc = pct ? `${a.toFixed(1)}% to ${b.toFixed(1)}%` : `${a} to ${b}`;
+        if (i == 0) {
+            desc = pct ? `> ${b.toFixed(1)}%` : `> ${b}`;
+        }
+        if (i == bins.length - 1) {
+            desc = pct ? `< ${a.toFixed(1)}%` : `< ${a}`;
+        }
+        // Show the last bin as "exactly" if it is a single value
         // Don't show empty bins (when data isn't distributed enough to be split into bins)
         if (last !== b) {
             info.bins.push({ desc, color: colors[i] });

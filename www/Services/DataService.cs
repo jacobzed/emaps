@@ -46,6 +46,8 @@ namespace EMapper.Services
         public int Votes { get; set; }
         [JsonPropertyName("vp")]
         public float Pct { get; set; }
+        [JsonPropertyName("vm")]
+        public float Margin { get; set; }
         [JsonPropertyName("m")]
         public string? MergedId { get; set; }
 
@@ -119,11 +121,11 @@ namespace EMapper.Services
         {
             return await db.QueryAsync<ElectionTrait>(@"
                 SELECT id as electionid, 
-                    date_part('year', date)::text || case when type = 'F' then ' Fed. ' else ' Prov. ' end || party || ' %' as name,
+                    date_part('year', date)::text || case when type = 'F' then ' Fed. ' else ' Prov. ' end || party || ' ' || x as name,
                     party,
-                    '%' as type, 
+                    x as type, 
                     map_id as mapId
-                FROM election, unnest(parties) as party
+                FROM election, unnest(parties) as party, unnest(ARRAY['Vote%', 'Margin%']) as x
                 WHERE is_archived = false
                 AND map_id IS NOT NULL
                 AND (region_id = @region OR region_id IS NULL)
@@ -141,7 +143,7 @@ namespace EMapper.Services
                 throw new ArgumentException("Too many geoIds");
 
             return await db.QueryAsync<ElectionData>(@"
-                SELECT election_id as electionId, ed_id || '-' || va_id as geoId, party, candidate, votes, pct, merged_id as mergedId
+                SELECT election_id as electionId, ed_id || '-' || va_id as geoId, party, candidate, votes, pct, margin, merged_id as mergedId
                 FROM election_data
                 WHERE election_id = @electionId
                 AND ed_id || '-' || va_id = ANY(@geoId)

@@ -194,7 +194,7 @@ export default {
 
 .map > div:nth-child(2) {
   padding: 10px;
-  width: 230px;
+  width: 240px;
   display: flex;
   flex-direction: column;
   gap: 10px;

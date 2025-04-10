@@ -12,6 +12,7 @@ logs/
 *.zip
 *.csv
 *.txt
+*.xlsx
 *.bat
 *.log*
 *.bak

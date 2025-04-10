@@ -136,10 +136,20 @@ export default {
             if (!last) {
                 return;
             }
-            const selected = JSON.parse(last);
+            const selected = JSON.parse(last)
+            let count = 0;
             this.electionTraits.forEach(t => {
                 t.active = selected.includes(t.name);
+                if (t.active) {
+                    count++;
+                }
             });
+            // If traits are ever renamed we will need to reset to the defaults
+            if (count == 0) {
+                this.electionTraits.forEach(t => {
+                    t.active = t.electionId == 44;
+                });
+            }
         },
         pushState() {
             const url = `#/${this.region?.id}/${this.boundary?.name}`;
