@@ -165,3 +165,6 @@ app.MapPost("/api/census/data", async ([FromServices] DataService dataService, C
 });
 
 app.Run();
+
+// Make sure the Program class is public so it can be accessed by the test project
+public partial class Program { }
