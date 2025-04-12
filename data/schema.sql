@@ -187,7 +187,8 @@ CREATE TABLE main.election_data (
     candidate text,
     votes integer NOT NULL,
     merged_id text,
-    pct numeric(6,3)
+    pct numeric(6,3),
+    margin numeric(6,3)
 );
 
 
@@ -338,6 +339,13 @@ CREATE INDEX idx_census_data_filter ON main.census_data USING btree (census_id, 
 
 
 --
+-- Name: idx_election_data; Type: INDEX; Schema: main; Owner: postgres
+--
+
+CREATE INDEX idx_election_data ON main.election_data USING btree (election_id, ed_id, va_id);
+
+
+--
 -- Name: idx_election_data_filter; Type: INDEX; Schema: main; Owner: postgres
 --
 
@@ -405,6 +413,14 @@ ALTER TABLE ONLY main.map_shp
 
 ALTER TABLE ONLY main.election
     ADD CONSTRAINT fkey_map FOREIGN KEY (map_id) REFERENCES main.map(id) ON UPDATE CASCADE ON DELETE SET NULL NOT VALID;
+
+
+--
+-- Name: election fkey_region; Type: FK CONSTRAINT; Schema: main; Owner: postgres
+--
+
+ALTER TABLE ONLY main.election
+    ADD CONSTRAINT fkey_region FOREIGN KEY (region_id) REFERENCES main.region(abbrev) NOT VALID;
 
 
 --
