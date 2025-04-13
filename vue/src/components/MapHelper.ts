@@ -424,7 +424,7 @@ export class MapHelper {
     private attachBoundsChangedHandlers() {
         const locEventName = 'map-bounds-changed';
         let locMouseOver = false;
-        let locTimer = 0;
+        let locTimer: any = null;
         // Keep track of the mouse so that we don't trigger events in a loop on our own instance
         this.map.addListener('drag', () => { locMouseOver = true; });
         this.map.addListener('mouseover', () => { locMouseOver = true; });
