@@ -116,11 +116,6 @@ app.MapGet("/api/region/{region}/features", async ([FromServices] MapService map
     return Results.Json(new { results });
 });
 
-app.MapGet("/api/location/features", async ([FromServices] MapService mapService, double lat, double lng) =>
-{
-    var results = await mapService.GetLatLngFeatures(lat, lng);
-    return Results.Json(new { results });
-});
 
 app.MapGet("/api/region/{region}/elections", async ([FromServices] DataService dataService, string region) =>
 {
@@ -128,16 +123,35 @@ app.MapGet("/api/region/{region}/elections", async ([FromServices] DataService d
     return Results.Json(new { results });
 });
 
+app.MapGet("/api/map/{mapId}", async ([FromServices] MapService mapService, int mapId) =>
+{
+    var result = await mapService.GetGeoJson(mapId);
+    return Results.Text(result.Content, "application/json");
+});
+
 app.MapGet("/api/map/{mapId}/{featureId}", async ([FromServices] MapService mapService, int mapId, string featureId) =>
 {
     var result = await mapService.GetGeoJson(mapId, featureId);
-    return Results.Text(result, "application/json");
+    return Results.Text(result.Content, "application/json");
 });
 
 app.MapGet("/api/map/{mapId}/{intersectMapId}/{intersectFeatureId}", async ([FromServices] MapService mapService, int mapId, int intersectMapId, string intersectFeatureId) =>
 {
-    var result = await mapService.GetGeoJsonFromIntersect(mapId, intersectMapId, intersectFeatureId);
-    return Results.Text(result, "application/json");
+    var result = await mapService.GetGeoJsonFromIntersect(mapId, intersectMapId, intersectFeatureId);    
+    return Results.Text(result.Content, "application/json");
+});
+
+app.MapGet("/api/map/{mapId}/{west},{south},{east},{north}/{zoom}", async ([FromServices] MapService mapService, int mapId, decimal north, decimal south, decimal east, decimal west, int zoom) =>
+{
+    if (mapId == 30)
+    {
+        // Federal ridings have been simplified to scale for 31=city, 32=province, 33=country
+        mapId = 31; 
+        if (zoom <= 9)
+            mapId = 32;
+    }
+    var result = await mapService.GetGeoJsonFromBounds(mapId, west, south, east, north);
+    return Results.Text(result.Content, "application/json");
 });
 
 app.MapPost("/api/election/data", async ([FromServices] DataService dataService, ElectionDataQuery query) =>

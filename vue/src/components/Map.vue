@@ -12,9 +12,9 @@ It is tightly coupled with the backend API.
 
 <script lang="ts">
 import { shallowRef, type PropType } from 'vue';
-import { MapHelper } from './MapHelper';
+import { MapHelper, type MapFeature, type MapLayer } from './MapHelper';
 import type { Region, Feature, CensusTrait, ElectionTrait } from './api';
-import { getFeature, getIntersectingFeatures } from './api';
+import { getBoundingBoxFeatures, getFeature, getFeatures, getIntersectingFeatures } from './api';
 import type { Tooltip, Legend } from './data';
 import { loadElectionData, loadCensusData, purgeCensusData, getTooltip } from './data';
 
@@ -31,7 +31,7 @@ export default {
       required: true
     }
   },
-  emits: ['customize', 'mounted', 'loading'],
+  emits: ['customize', 'mounted', 'loading', 'click'],
   data: function () {
     return {
       trait: null as CensusTrait | ElectionTrait | null,
@@ -51,8 +51,17 @@ export default {
   async mounted() {
     console.log('creating map instance...')
     this.map = new MapHelper(this.$refs.mapdiv as HTMLElement);
-    this.map.onMouseOver = this.onMouseOver;
-    this.map.onMouseOut = this.onMouseOut;
+    //this.map.onMouseOver = this.onMouseOver;
+    //this.map.onMouseOut = this.onMouseOut;
+    // this.map.onBoundsChanged = async () => {
+    //   const zoom = this.map.getZoom();
+    //   const bounds = this.map.getBounds().toJSON();
+    //   console.log(zoom, bounds);
+    //   const geojson = await getBoundingBoxFeatures(30, zoom, bounds);
+    //   const layer = this.map.addLayer({ name: 'Ridings', label: 'name', labelMinZoom: 11 }, geojson);
+    //   this.map.showLayer(layer);
+    // };
+
     this.$emit('mounted');
   },
   unmounted() {
@@ -101,7 +110,7 @@ export default {
         return;
       }
 
-      layer = this.map.addLayer({ name, label: 'id' }, geojson);
+      layer = this.map.addLayer({ name, label: 'id', onMouseOver: this.onMouseOver, onMouseOut: this.onMouseOut }, geojson);
       this.map.showLayer(layer);
     },
     /** Load data for the selected trait. */
@@ -110,7 +119,6 @@ export default {
       //console.log('loading data for trait', this.trait, layer);
       if (!this.boundary || !this.trait || !layer)
         return;
-
 
       this.$emit('loading', true);
       if (this.trait.type == 'election') {
@@ -124,16 +132,43 @@ export default {
       this.map.refreshLayer(layer);
 
     },
-    onMouseOver(props: any) {
-      this.tooltip = getTooltip(props, this.trait!);
+    /** Load all federal riding features. */
+    async loadAllRidings() {
+      this.map.hideAllLayers();
+      this.boundary = null;
+      this.legend = null;
+
+      //const bounds = this.map.getBounds().toJSON()
+      //const zoom = this.map.getZoom();
+      //const geojson = await getBoundingBoxFeatures(32, zoom, bounds);
+      let layer = this.map.findLayer('Ridings');
+      if (layer) {
+        this.map.showLayer(layer);
+        return;
+      }
+      const geojson = await getFeatures(32);
+      const onClick = (feature: MapFeature, props: any, layer: MapLayer) => {
+        this.$emit('click', props);
+      };
+      layer = this.map.addLayer({ name: 'Ridings', onClick, onMouseOver: this.onMouseOverRiding, onMouseOut: this.onMouseOut }, geojson);
+      this.map.showLayer(layer);
     },
-    onMouseOut(props: any) {
+    onMouseOver(feature: MapFeature, props: any) {
+      if (this.trait) {
+        this.tooltip = getTooltip(props, this.trait);
+      }
+    },
+    onMouseOut(feature: MapFeature, props: any) {
       this.tooltip = null;
+    },
+    onMouseOverRiding(feature: MapFeature, props: any) {
+      this.tooltip = { type: 'election', title: props.name, results: [] };
     },
     getLocation() {
       const center = this.map.getCenter();
       const zoom = this.map.getZoom();
-      return { lat: center.lat(), lng: center.lng(), zoom };
+      const bounds = this.map.getBounds();
+      return { lat: center.lat(), lng: center.lng(), zoom, bounds: bounds.toJSON() };
     },
   },
 }
@@ -143,9 +178,7 @@ export default {
 
   <div class="map">
     <div ref="mapdiv"></div>
-    <div v-show="boundary">
-      <slot></slot>
-
+    <div>
       <div class="radio-list" v-show="boundary && !tooltip">
         <p><a href="#" @click.prevent="$emit('customize')" class="button">Customize layers...</a></p>
         <label v-for="t in electionTraits.filter(t => t.active)">

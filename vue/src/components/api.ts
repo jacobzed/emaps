@@ -5,7 +5,7 @@ Licensed under a source-available license. See LICENSE file for details.
 
 */
 
-const api = import.meta.env.VITE_API_URL;
+const api = import.meta.env.VITE_API_URL || '';
 
 export type CensusTrait = {
     type: 'census';
@@ -113,15 +113,6 @@ export async function getBoundaries(regionId: string) : Promise<Feature[]> {
     return data.results;
 }
 
-export async function getBoundariesAt(pos: { lat: number, lng: number }) : Promise<Feature[]> {
-    const response = await fetch(api + '/api/location/features?lat=' + pos.lat.toFixed(5) + '&lng=' + pos.lng.toFixed(5));
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.message);
-    }
-    return data.results;
-}
-
 export async function getElectionTraits(regionId: string) : Promise<ElectionTrait[]> {
     const response = await fetch(api + '/api/region/' + regionId + '/elections');
     const data = await response.json();
@@ -137,7 +128,19 @@ export async function getElectionTraits(regionId: string) : Promise<ElectionTrai
 }
 
 /**
- * Get GeoJSON feature.
+ * Get all features for a map.
+ */
+export async function getFeatures(mapId: number) : Promise<any> {
+    const response = await fetch(api + '/api/map/' + mapId);
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
+    return data;
+}
+
+/**
+ * Get a single feature for a map.
  * e.g. get a riding boundary.
  */
 export async function getFeature(mapId: number, featureId: number) : Promise<any> {
@@ -150,7 +153,7 @@ export async function getFeature(mapId: number, featureId: number) : Promise<any
 }
 
 /**
- * Get GeoJSON features that intersect with another map feature.
+ * Get all features that intersect with another map feature.
  * e.g. get census tracts that intersect with a riding boundary.
  */
 export async function getIntersectingFeatures(mapId: number, intersectMapId: number, intersectFeatureId: number) : Promise<any> {
@@ -161,6 +164,20 @@ export async function getIntersectingFeatures(mapId: number, intersectMapId: num
     }
     return data;
 }
+
+/**
+ * Get all features that fall within a bounding box.
+ * The zoom level is used to determine the level of detail of the features.
+ */
+export async function getBoundingBoxFeatures(mapId: number, zoom: number, bounds: { west: number, south: number, east: number, north: number }) : Promise<any> {
+    const response = await fetch(api + '/api/map/' + mapId + '/' + bounds.west.toFixed(2) + ',' + bounds.south.toFixed(2) + ',' + bounds.east.toFixed(2) + ',' + bounds.north.toFixed(2) + '/' + zoom);
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message);
+    }
+    return data;
+}
+
 
 export async function getElectionData(electionId: number, geoId: string[]) : Promise<ElectionData[]> {
     const response = await fetch(api + '/api/election/data', {

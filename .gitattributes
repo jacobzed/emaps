@@ -8,6 +8,11 @@
 *.css      text diff=css
 *.json     text
 *.js       text
+*.ts       text
+*.vue      text
+*.sql      text
+
+
 
 
 *.sln      text eol=crlf

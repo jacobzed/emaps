@@ -19,7 +19,7 @@ export type MapFeature = google.maps.Polygon | google.maps.Polyline | google.map
  */
 export type MapFeatureStylingFunction = (feature: MapFeature, props: any) => google.maps.PolygonOptions | google.maps.PolylineOptions | google.maps.MarkerOptions;
 
-export type MapFeatureCallback = (feature: MapFeature, props: any) => void;
+export type MapFeatureCallback = (feature: MapFeature, props: any, layer: MapLayer) => void;
 
 /**
  * A map layer represents a collection of geographic features that can be toggled on/off and styled.
@@ -49,12 +49,19 @@ export type MapLayer = {
     bounds: google.maps.LatLngBounds;
     /** All IDs of the features in the layer. */
     ids: string[];
+    /** Callbacks */
+    onClick?: MapFeatureCallback;
+    onMouseOver?: MapFeatureCallback;
+    onMouseOut?: MapFeatureCallback;
 }
 
 /**
  * Options for initializing a map layer.
  */
-export type MapLayerOptions = Pick<MapLayer, 'name' | 'label' | 'getStyle'>;
+export type MapLayerOptions = Pick<MapLayer, 'name' | 'label' | 'getStyle' | 'onMouseOver' | 'onMouseOut' | 'onClick'> & {
+    /** Min zoom level to show label. Used to prevent label crowding when zoomed out. */
+    labelMinZoom?: number;
+}
 
 
 /** Shared state to keep track of the last location for the map. */
@@ -68,8 +75,10 @@ let lastLocation: any = null;
 export class MapHelper {
     private map: google.maps.Map;
     private layers: MapLayer[] = [];
-    public onMouseOver: (props: any) => void = () => { };
-    public onMouseOut: (props: any) => void = () => { };
+    // public onMouseOver: (props: any) => void = () => { };
+    // public onMouseOut: (props: any) => void = () => { };
+    // public onClick: (props: any) => void = () => { };
+    public onBoundsChanged: () => void = () => { };
 
     private defaultPolygonOptions: google.maps.PolygonOptions = {
         strokePosition: google.maps.StrokePosition.INSIDE,
@@ -104,6 +113,8 @@ export class MapHelper {
             mapTypeControl: false,
             // disable fullscreen control
             fullscreenControl: false,
+            // restrict zoom/pan to Canada
+            restriction: { latLngBounds: { east: -52, west: -132, north: 60, south: 40 } },
             // disable most labels since they create visual clutter
             // https://developers.google.com/maps/documentation/javascript/style-reference#stylers
             styles: [
@@ -136,12 +147,12 @@ export class MapHelper {
 
     destroy() {
         google.maps.event.clearInstanceListeners(this.map);
-        this.clearLayers();
+        this.removeAllLayers();
         this.map = null as any;
     }
 
     /** Remove all layers from the map. */
-    private clearLayers() {
+    private removeAllLayers() {
         for (const layer of this.layers) {
             this.removeLayer(layer);
         }
@@ -221,7 +232,7 @@ export class MapHelper {
                     let label = new MapLabel({
                         text: feature.properties[options.label],
                         position: labelPos,
-                        minZoom: geojson.features.length > 10 ? 15 : 12,
+                        minZoom: options.labelMinZoom || 15,
                     });
                     poly.set('label', label);
                 }
@@ -320,28 +331,31 @@ export class MapHelper {
     }
 
     private attachHandlers(feature: google.maps.Polygon, layer: MapLayer) {
-        feature.addListener('click', () => {
-            return;
-            //this.showLayer(layer);
-            const i = layer.selected.indexOf(feature);
-            if (i >= 0) {
-                layer.selected.splice(i, 1);
-            }
-            else {
-                layer.selected.push(feature);
-            }
-        });
 
         feature.addListener('mouseover', () => {
             this.setHighlight(feature);
-            this.onMouseOver(feature.get('props'));
+            //this.onMouseOver(feature.get('props'));
+            if (layer.onMouseOver) {
+                layer.onMouseOver(feature, feature.get('props'), layer);
+            }
         });
 
         feature.addListener('mouseout', () => {
             if (!layer.selected.includes(feature))
                 this.cancelHighlight(feature, layer);
-            this.onMouseOut(feature.get('props'));
+            //this.onMouseOut(feature.get('props'));
+            if (layer.onMouseOut) {
+                layer.onMouseOut(feature, feature.get('props'), layer);
+            }
         });
+
+        feature.addListener('click', () => {
+            //this.onClick(feature.get('props'));
+            if (layer.onClick) {
+                layer.onClick(feature, feature.get('props'), layer);
+            }
+        });
+
     }
 
     private setHighlight(feature: google.maps.Polygon) {
@@ -368,11 +382,9 @@ export class MapHelper {
     showLayer(layer: MapLayer) {
 
         // Auto hide all other polygon layers to avoid visual clutter
-        if (layer.type == 'polygon') {
-            for (const l of this.layers) {
-                if (l.type == 'polygon' && l.visible && l !== layer) {
-                    this.hideLayer(l);
-                }
+        for (const l of this.layers) {
+            if (l.type == 'polygon' && l.visible && l !== layer) {
+                this.hideLayer(l);
             }
         }
 
@@ -395,6 +407,15 @@ export class MapHelper {
         }
 
         layer.visible = true;
+    }
+
+    /** Hide the active layer and the outline layer. */
+    hideAllLayers() {
+        for (const l of this.layers) {
+            if (l.visible) {
+                this.hideLayer(l);
+            }
+        }
     }
 
     /** Hide a layer by removing it from the map. */
@@ -437,6 +458,7 @@ export class MapHelper {
                 lastLocation = { zoom, center };
                 // Debounce needed because of potential fast invocations when dragging
                 locTimer = setTimeout(() => {
+                    this.onBoundsChanged();
                     window.dispatchEvent(new CustomEvent(locEventName, { detail: { zoom, center } }));
                 }, 100);
             }
@@ -462,6 +484,10 @@ export class MapHelper {
 
     getZoom(): number {
         return this.map.getZoom()!;
+    }
+
+    getBounds(): google.maps.LatLngBounds {
+        return this.map.getBounds()!;
     }
 
     /** Calculate the center point of a polygon. */

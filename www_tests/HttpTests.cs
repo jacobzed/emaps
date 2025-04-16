@@ -50,19 +50,6 @@ public class HttpTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task GetLatLngFeatures_ReturnsOkAndResults()
-    {
-        var lat = 49.15;
-        var lng = -123.0;
-        var response = await _client.GetAsync($"/api/location/features?lat={lat}&lng={lng}");
-        response.EnsureSuccessStatusCode();
-
-        var content = await response.Content.ReadFromJsonAsync<CollectionResult<MapFeature>>();
-        Assert.NotNull(content);
-        Assert.NotEmpty(content.Results);
-    }
-
-    [Fact]
     public async Task GetRegionElectionTraits_ReturnsOkAndResults()
     {
         var region = "BC";
@@ -75,7 +62,19 @@ public class HttpTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task GetGeoJson_ReturnsOkAndJson()
+    public async Task GetGeoJsonAll_ReturnsOkAndJson()
+    {
+        var mapId = 32; // 2023 Federal Ridings
+        var response = await _client.GetAsync($"/api/map/{mapId}");
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadFromJsonAsync<GeoJsonResult>();
+        Assert.NotNull(content);
+        Assert.NotEmpty(content.Features);
+    }
+
+    [Fact]
+    public async Task GetGeoJsonSingle_ReturnsOkAndJson()
     {
         var mapId = 30; // 2023 Federal Ridings
         var featureId = "59002";
@@ -94,6 +93,18 @@ public class HttpTests : IClassFixture<WebApplicationFactory<Program>>
         var intersectMapId = 30; // 2023 Federal Ridings
         var intersectFeatureId = "59002";
         var response = await _client.GetAsync($"/api/map/{mapId}/{intersectMapId}/{intersectFeatureId}");
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadFromJsonAsync<GeoJsonResult>();
+        Assert.NotNull(content);
+        Assert.NotEmpty(content.Features);
+    }
+
+    [Fact]
+    public async Task GetGeoJsonFromBounds_ReturnsOkAndJson()
+    {
+        var mapId = 30; // 2023 Federal Ridings
+        var response = await _client.GetAsync($"/api/map/{mapId}/-123.29,49.14,-122.85,49.35/12");
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadFromJsonAsync<GeoJsonResult>();

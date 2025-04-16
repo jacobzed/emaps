@@ -24,6 +24,22 @@ namespace EMapper.Services
         public required string Name { get; set; }
     }
 
+    public class GeoJson
+    {
+        /// <summary>
+        /// Set of IDs for the features in the GeoJSON object.
+        /// This is mostly for cache invalidation.
+        /// </summary>
+        public required string[] FeatureIds { get; set; }
+
+        /// <summary>
+        /// The actual GeoJSON object.
+        /// This is kept as a string to avoid the overhead of deserializing it into a C# object since we don't need to
+        /// do any further processing on it before returning it to the client.
+        /// </summary>
+        public required string Content { get; set; }
+    }
+
 
     public class MapService
     {
@@ -79,14 +95,12 @@ namespace EMapper.Services
             ", new { lat, lng });
         }
 
-
         /// <summary>
-        /// Get a single feature from the specified map.
+        /// Get all features from the specified map.
         /// </summary>
-        /// <returns>GeoJSON</returns>
-        public async Task<string> GetGeoJson(int mapId, string featureId)
+        public async Task<GeoJson> GetGeoJson(int mapId)
         {
-            return await db.QueryFirstAsync<string>(@"
+            return await db.QueryFirstAsync<GeoJson>(@"
                 SELECT jsonb_build_object(
                     'type', 'FeatureCollection',
                     'features', jsonb_agg(
@@ -96,7 +110,28 @@ namespace EMapper.Services
                             'properties', to_jsonb(shp) - 'geom' - 'map_id'
                         )
                     )
-                ) AS geojson
+                ) AS content
+                FROM map_shp shp
+                WHERE map_id = @mapId
+                ", new { mapId });
+        }
+
+        /// <summary>
+        /// Get a single feature from the specified map.
+        /// </summary>
+        public async Task<GeoJson> GetGeoJson(int mapId, string featureId)
+        {
+            return await db.QueryFirstAsync<GeoJson>(@"
+                SELECT jsonb_build_object(
+                    'type', 'FeatureCollection',
+                    'features', jsonb_agg(
+                        jsonb_build_object(
+                            'type', 'Feature',
+                            'geometry', ST_AsGeoJSON(shp.geom)::jsonb,
+                            'properties', to_jsonb(shp) - 'geom' - 'map_id'
+                        )
+                    )
+                ) AS content
                 FROM map_shp shp
                 WHERE map_id = @mapId
                 AND id = @featureId
@@ -106,10 +141,9 @@ namespace EMapper.Services
         /// <summary>
         /// Get all features from the specified map that overlap with another map feature from the database.
         /// </summary>
-        /// <returns>GeoJSON</returns>
-        public async Task<string> GetGeoJsonFromIntersect(int mapId, int intersectMapId, string intersectFeatureId)
+        public async Task<GeoJson> GetGeoJsonFromIntersect(int mapId, int intersectMapId, string intersectFeatureId)
         {
-            return await db.QueryFirstAsync<string>(@"
+            return await db.QueryFirstAsync<GeoJson>(@"
                 SELECT jsonb_build_object(
                     'type', 'FeatureCollection',
                     'features', jsonb_agg(
@@ -119,7 +153,7 @@ namespace EMapper.Services
                             'properties', to_jsonb(shp) - 'geom' - 'map_id'
                         )
                     )
-                ) AS geojson
+                ) AS content
                 FROM map_shp shp
                 JOIN map_shp bounds
                 ON ST_Area(ST_Intersection(shp.geom, bounds.geom)) / ST_Area(shp.geom) >= 0.2
@@ -130,30 +164,68 @@ namespace EMapper.Services
         }
 
         /// <summary>
-        /// Get all features from the specified map that overlap with the given WKT region.
+        /// Get all features from the specified map that overlap with the given bounding box.
+        /// </summary>
+        public async Task<GeoJson> GetGeoJsonFromBounds(int mapId, decimal west, decimal south, decimal east, decimal north)
+        {
+            return await db.QueryFirstAsync<GeoJson>(@"
+                WITH x AS (
+                    SELECT id, name, shp.geom
+                    FROM map_shp shp
+                    JOIN (SELECT ST_MakeEnvelope(@west, @south, @east, @north, 4326) AS geom) AS bounds
+                    ON ST_Intersects(shp.geom, bounds.geom) = True
+	                WHERE map_id = @mapId
+                )
+                SELECT array_agg(id) AS featureids,
+                    jsonb_build_object(
+                    'type', 'FeatureCollection',
+                    'features', jsonb_agg(
+                        jsonb_build_object(
+                            'type', 'Feature',
+                            'geometry', ST_AsGeoJSON(geom)::jsonb,
+                            'properties', to_jsonb(x) - 'geom'
+                        )
+                    )
+                ) AS content
+                FROM x
+                
+                ", new { mapId, north, south, east, west });
+        }
+
+        /// <summary>
+        /// Get all features from the specified map that overlap with the given bounding box.
         /// </summary>
         /// <returns>GeoJSON</returns>
-        public async Task<string> GetGeoJsonFromIntersect(int mapId, string intersectWKT)
+        public async Task<GeoJson> GetGeoJsonFromBoundsWithSimplify(int mapId, decimal west, decimal south, decimal east, decimal north, int zoom)
         {
-            intersectWKT = SanitizeWKT(intersectWKT);
+            var tolerance = GetSimplifyTolerance(zoom);
 
-            return await db.QueryFirstAsync<string>(@"
-                    SELECT jsonb_build_object(
-                        'type', 'FeatureCollection',
-                        'features', jsonb_agg(
-                            jsonb_build_object(
-                                'type', 'Feature',
-                                'geometry', ST_AsGeoJSON(shp.geom)::jsonb,
-                                'properties', to_jsonb(shp) - 'geom'
-                            )
-                        )
-                    ) AS geojson
+            return await db.QueryFirstAsync<GeoJson>(@"
+                WITH x AS (
+                    SELECT id, name, shp.geom
                     FROM map_shp shp
-                    JOIN (SELECT ST_GeomFromText(@intersectWKT, 4326) AS geom) AS bounds
-                    ON ST_Area(ST_Intersection(shp.geom, bounds.geom)) / ST_Area(shp.geom) >= 0.2
-                    WHERE shp.map_id = @mapId
+                    JOIN (SELECT ST_MakeEnvelope(@west, @south, @east, @north, 4326) AS geom) AS bounds
+                    ON ST_Intersects(shp.geom, bounds.geom) = True
+	                WHERE map_id = @mapId
+                ), 
+                y AS (
+                    SELECT id, name, ST_CoverageSimplify(geom, @tolerance) OVER () AS simplified_geom
+                    FROM x
+                )
+                SELECT array_agg(id) AS featureids,
+                    jsonb_build_object(
+                    'type', 'FeatureCollection',
+                    'features', jsonb_agg(
+                        jsonb_build_object(
+                            'type', 'Feature',
+                            'geometry', ST_AsGeoJSON(simplified_geom)::jsonb,
+                            'properties', to_jsonb(y) - 'simplified_geom'
+                        )
+                    )
+                ) AS content
+                FROM y
                 
-                ", new { mapId, intersectWKT });
+                ", new { mapId, north, south, east, west, tolerance });
         }
 
         /// <summary>
@@ -164,6 +236,30 @@ namespace EMapper.Services
         private string SanitizeWKT(string wkt)
         {
             return Regex.Replace(wkt, "[^A-Za-z0-9,() ]", "");
+        }
+
+        /// <summary>
+        /// Calculate best simplify tolerance so that we don't fetch too much detail at low zoom levels.
+        /// </summary>
+        private decimal GetSimplifyTolerance(int zoom)
+        {
+            switch (zoom)
+            {
+                case >= 15:
+                    return 0.0003m;
+                case 14:
+                    return 0.0004m;
+                case 13:
+                    return 0.0005m;
+                case 12:
+                    return 0.001m; 
+                case 11:
+                    return 0.002m;
+                case <= 7:
+                    return 0.1m;
+                default:
+                    return 0.01m;
+            }
         }
 
     }
