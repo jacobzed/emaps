@@ -13,6 +13,7 @@
     "copy-to-wwwroot": "xcopy /E /I /Y dist\\assets ..\\www\\wwwroot\\static"
   },
   "dependencies": {
+    "tippy.js": "^6.3.7",
     "vue": "^3.5.13",
     "vue-toast-notification": "^3.1.3"
   },

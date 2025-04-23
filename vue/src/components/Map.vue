@@ -51,8 +51,7 @@ export default {
   async mounted() {
     console.log('creating map instance...')
     this.map = new MapHelper(this.$refs.mapdiv as HTMLElement);
-    //this.map.onMouseOver = this.onMouseOver;
-    //this.map.onMouseOut = this.onMouseOut;
+    // experiment with only loading ridings within the map bounds
     // this.map.onBoundsChanged = async () => {
     //   const zoom = this.map.getZoom();
     //   const bounds = this.map.getBounds().toJSON();
@@ -80,6 +79,15 @@ export default {
       });
       const layer = this.map.addLayer({ name: 'Boundary' }, geojson);
       this.map.showLayer(layer);
+      this.tooltip = null;
+
+      // If no trait is selected, select the first census trait
+      if (this.trait == null) {
+        const traits = this.censusTraits.filter(t => t.active);
+        if (traits.length > 0) {
+          this.trait = traits[0];
+        }
+      }
       await this.loadFeatures();
       await this.loadData();
     },
@@ -138,9 +146,6 @@ export default {
       this.boundary = null;
       this.legend = null;
 
-      //const bounds = this.map.getBounds().toJSON()
-      //const zoom = this.map.getZoom();
-      //const geojson = await getBoundingBoxFeatures(32, zoom, bounds);
       let layer = this.map.findLayer('Ridings');
       if (layer) {
         this.map.showLayer(layer);
@@ -162,7 +167,7 @@ export default {
       this.tooltip = null;
     },
     onMouseOverRiding(feature: MapFeature, props: any) {
-      this.tooltip = { type: 'election', title: props.name, results: [] };
+      this.tooltip = { type: 'election', title: props.name, results: [], notes: 'Click to load the election results and census data for this riding.' };
     },
     getLocation() {
       const center = this.map.getCenter();
@@ -189,6 +194,11 @@ export default {
         </label>
       </div>
 
+      <div v-if="!boundary && !tooltip">
+        <p><strong>Select a riding</strong></p>
+        <p>Please select a riding from the dropdown on the top menu or <a href="#" @click="loadAllRidings">show all ridings</a>.</p>
+      </div>
+
       <div v-if="tooltip && tooltip.type == 'election'">
         <p><strong>{{ tooltip.title }}</strong></p>
         <p class="notes">{{ tooltip.notes }}</p>
@@ -198,7 +208,7 @@ export default {
             <div :style="{ width: r.pct * 100 + '%', backgroundColor: r.color }"></div>
           </div>
         </div>
-        <p v-if="tooltip.results.length == 0">No data available.</p>
+        <p v-if="tooltip.results.length == 0 && !tooltip.notes">No data available.</p>
       </div>
 
       <div v-if="tooltip && tooltip.type == 'census' && trait?.type == 'census'">
@@ -206,7 +216,7 @@ export default {
         <div v-for="r in tooltip.results" class="tooltip-item">
           <span v-bind:class="{ 'highlight': r.id == trait.id }">{{ r.name }} ({{ r.value }})</span>
         </div>
-        <p v-if="tooltip.results.length == 0">No data available.</p>
+        <p v-if="tooltip.results.length == 0 && !tooltip.notes">No data available.</p>
       </div>
 
       <div v-if="legend && trait">

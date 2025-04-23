@@ -26,7 +26,6 @@ import { getRegions, getCensusTraits, getElectionTraits, getBoundaries } from ".
 import { purgeCensusData } from "./components/data";
 import Map from "./components/Map.vue";
 import {useToast} from 'vue-toast-notification';
-import 'vue-toast-notification/dist/theme-default.css';
 
 const $toast = useToast();
 
@@ -69,12 +68,12 @@ export default {
     },
     methods: {
         showInfo: function (message: string) {
-            $toast.open({ message, type: 'info', position: 'top-right' });
+            $toast.open({ message, type: 'info', position: 'top-left' });
         },
         showError: function (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             console.error(message);
-            $toast.open({ message, type: 'error', position: 'top-right' });
+            $toast.open({ message, type: 'error', position: 'top-left' });
         },
         async selectRegion(region: Region, clicked: boolean = false) {
             this.picker = '';
@@ -127,6 +126,7 @@ export default {
             this.boundary = null;
             const map = this.$refs.map1 as InstanceType<typeof Map>;
             map.loadAllRidings();
+            //this.showInfo('Showing all federal ridings. Click on a riding to load more information.');
         },
         clickRiding(props: any) {
             this.selectRegionAndBoundary(props.region_id, 'Riding: ' + props.name, true);
@@ -217,7 +217,7 @@ export default {
             <a href="#" @click.prevent="picker = 'boundary'" class="dropdown">{{ boundary ? boundary.name : "Select..." }}</a>
         </div>
         <div>
-            <a href="#" @click.prevent="showAllRidings">Show All Ridings</a>
+            <a href="#" @click="showAllRidings">Show All Ridings</a>
         </div>
         <div>
             <a href="#" @click.prevent="picker = 'about'">About</a>
