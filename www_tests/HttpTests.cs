@@ -127,7 +127,7 @@ public class HttpTests : IClassFixture<WebApplicationFactory<Program>>
         var content = await response.Content.ReadFromJsonAsync<CollectionResult<ElectionData>>();
         Assert.NotNull(content);
         Assert.NotEmpty(content.Results);
-        Assert.True(content.Results.All(r => query.ElectionId) == r.ElectionId);
+        Assert.True(content.Results.All(r => query.ElectionId == r.ElectionId));
         Assert.True(content.Results.All(r => query.GeoId.Contains(r.GeoId)));
     }
 

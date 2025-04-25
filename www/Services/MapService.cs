@@ -57,42 +57,27 @@ namespace EMapper.Services
         public async Task<IEnumerable<MapFeature>> GetRegionFeatures(string region)
         {
             return await db.QueryAsync<MapFeature>(@"
-                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 2
+                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 3
                 FROM map_shp
                 WHERE map_id = 12 
                 AND region_id = @region
 
                 -- get 343 ridings from the 2023 federal representation order
                 UNION
-                SELECT region_id as regionid, map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
+                SELECT region_id as regionid, map_id as mapid, id as featureid, '2025 Riding: ' || name as name, 1
                 FROM map_shp
                 WHERE map_id = 30 
                 AND region_id = @region
 
+                -- get 338 ridings from the 2013 federal representation order
+                UNION
+                SELECT region_id as regionid, map_id as mapid, id as featureid, '2021 Riding: ' || name as name, 2
+                FROM map_shp
+                WHERE map_id = 20 
+                AND region_id = @region
+
                 ORDER BY 5, 4
             ", new { region });
-        }
-
-        /// <summary>
-        /// Get features at the given location.
-        /// </summary>
-        public async Task<IEnumerable<MapFeature>> GetLatLngFeatures(double lat, double lng)
-        {
-            return await db.QueryAsync<MapFeature>(@"
-                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 2
-                FROM map_shp
-                WHERE map_id = 12 
-                AND ST_Contains(geom, ST_SetSRID(ST_MakePoint(@lng, @lat), 4326))
-
-                -- get 343 ridings from the 2023 federal representation order
-                UNION
-                SELECT region_id as regionid, map_id as mapid, id as featureid, 'Riding: ' || name as name, 1
-                FROM map_shp
-                WHERE map_id = 30
-                AND ST_Contains(geom, ST_SetSRID(ST_MakePoint(@lng, @lat), 4326))   
-
-                ORDER BY 5, 4
-            ", new { lat, lng });
         }
 
         /// <summary>

@@ -155,7 +155,7 @@ export default {
       const onClick = (feature: MapFeature, props: any, layer: MapLayer) => {
         this.$emit('click', props);
       };
-      layer = this.map.addLayer({ name: 'Ridings', onClick, onMouseOver: this.onMouseOverRiding, onMouseOut: this.onMouseOut }, geojson);
+      layer = this.map.addLayer({ name: 'Ridings', label: 'name', labelMinZoom: 11, onClick, onMouseOver: this.onMouseOverRiding, onMouseOut: this.onMouseOut }, geojson);
       this.map.showLayer(layer);
     },
     onMouseOver(feature: MapFeature, props: any) {

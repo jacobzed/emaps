@@ -182,7 +182,7 @@ export class MapHelper {
     /** Add a layer to the map. If a layer with the same name already exists, it will be replaced.
      * The layer will be hidden by default. */
     addLayer(options: MapLayerOptions, geojson: any): MapLayer {
-        const labelPlacer = new PoleLabelPlacement(1); // 0.001 degrees precision
+        //const labelPlacer = new PoleLabelPlacement(1); // 0.001 degrees precision
 
         const old = this.findLayer(options.name);
         if (old) {
@@ -228,13 +228,16 @@ export class MapHelper {
 
                 // Add a label to the polygon if a label property is specified.
                 if (options.label) {
-                    const labelPos = labelPlacer.findPosition(poly);
-                    let label = new MapLabel({
-                        text: feature.properties[options.label],
-                        position: labelPos,
-                        minZoom: options.labelMinZoom || 15,
-                    });
-                    poly.set('label', label);
+                    //const labelPos = labelPlacer.findPosition(poly);
+                    const labelPos = this.getLabelPos(poly);
+                    if (labelPos) {
+                        let label = new MapLabel({
+                            text: feature.properties[options.label],
+                            position: labelPos,
+                            minZoom: options.labelMinZoom || 15,
+                        });
+                        poly.set('label', label);
+                    }
                 }
 
                 this.attachHandlers(poly, layer);
@@ -262,13 +265,16 @@ export class MapHelper {
 
                     // Add a label to the polygon if a label property is specified.
                     if (options.label) {
-                        const labelPos = labelPlacer.findPosition(poly);
-                        let label = new MapLabel({
-                            text: feature.properties[options.label],
-                            position: labelPos,
-                            minZoom: geojson.features.length > 10 ? 15 : 12,
-                        });
-                        poly.set('label', label);
+                        //const labelPos = labelPlacer.findPosition(poly);
+                        const labelPos = this.getLabelPos(poly);
+                        if (labelPos) {
+                            let label = new MapLabel({
+                                text: feature.properties[options.label],
+                                position: labelPos,
+                                minZoom: geojson.features.length > 10 ? 15 : 12,
+                            });
+                            poly.set('label', label);
+                        }
                     }
 
                     this.attachHandlers(poly, layer);
@@ -496,5 +502,15 @@ export class MapHelper {
         polygon.getPaths().getAt(0).forEach(point => bounds.extend(point));
         return bounds.getCenter();
     }
+
+    /** Calculate best position for label placement. */
+    private getLabelPos(polygon: google.maps.Polygon): google.maps.LatLng | null {
+        let pos = this.getPolygonCenter(polygon);
+        if (google.maps.geometry.poly.containsLocation(pos, polygon)) {
+            return pos;
+        }
+        return null;
+    }
+
 
 }

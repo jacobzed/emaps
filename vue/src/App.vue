@@ -129,7 +129,7 @@ export default {
             //this.showInfo('Showing all federal ridings. Click on a riding to load more information.');
         },
         clickRiding(props: any) {
-            this.selectRegionAndBoundary(props.region_id, 'Riding: ' + props.name, true);
+            this.selectRegionAndBoundary(props.region_id, '2025 Riding: ' + props.name, true);
         },
         async selectTraits() {
             this.picker = '';
@@ -264,7 +264,7 @@ export default {
     </div>
 
     <div class="dialog" v-show="picker == 'boundary'">
-        <p>Select a boundary (federal ridings use new 2023 representation order, cities use census subdivisions which generally correspond to municipal boundaries): </p>
+        <p>Select a boundary (federal ridings available in 2013 and 2023 representation orders, cities use census subdivisions which generally correspond to municipal boundaries): </p>
         <ul class="cols">
             <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
                 <a href="#" @click.prevent="selectBoundary(b, true)">{{ b.name }}</a>
