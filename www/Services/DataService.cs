@@ -130,6 +130,17 @@ namespace EMapper.Services
                 AND map_id IS NOT NULL
                 AND (region_id = @region OR region_id IS NULL)
 
+                UNION
+                SELECT id as electionid, 
+                    date_part('year', date)::text || case when type = 'F' then ' Fed. ' else ' Prov. ' end || ' Winner' as name,
+                    null,
+                    'Winner' as type, 
+                    map_id as mapId
+                FROM election
+                WHERE is_archived = false
+                AND map_id IS NOT NULL
+                AND (region_id = @region OR region_id IS NULL)
+
                 ORDER BY party, 1, 2
             ", new { region });
         }

@@ -59,6 +59,8 @@ const censusTraits = new Map<number, CensusTrait>();
   */
 export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): Promise<Legend> {
 
+    //console.log(trait);
+
     // Some data may already be loaded, so we only request missing data.
     const missing = [];
     const geoIds = layer.ids;
@@ -105,11 +107,31 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
     values.sort((a, b) => b - a);
     */
 
+    const type = trait.name.substring(trait.name.lastIndexOf(' ') + 1);
+
+    if (type == 'Winner') {
+
+        // Create a callback that map.refreshLayer will use for styling features
+        layer.getStyle = (feature, props) => {
+            const key = trait.electionId + '-' + props.id;
+
+            const results = electionData.get(key);
+            if (results && results.length > 0) {
+                const winner = results.reduce((a, b) => a.vp > b.vp ? a : b)
+                const color = getPartyColor(winner.p);
+                return { fillColor: color, fillOpacity: 0.7, strokeColor: color };
+            }
+
+            return { fillColor: '#eee', fillOpacity: 0.4, strokeColor: '#eee' };
+        }
+
+        return { bins: [] };
+    }
+
     //const bins = getQuantiles(values, 4);
     let bins = [0.35, 0.25, 0.15, 0]; // fixed values are better for absolute comparisons like margin of victory
     let colors = getColorScheme(trait.party);
     let legend = getLegend([100], [35, 25, 15, 0], colors, true);
-    const type = trait.name.substring(trait.name.lastIndexOf(' ') + 1);
 
     if (type == 'Margin%') {
         bins = [0.15, 0.05, -0.05, -1];
@@ -119,16 +141,15 @@ export async function loadElectionData(layer: MapLayer, trait: ElectionTrait): P
     // Create a callback that map.refreshLayer will use for styling features
     layer.getStyle = (feature, props) => {
         const key = trait.electionId + '-' + props.id;
-        const row = electionData.get(key)?.find(r => r.p === trait.party);
-        if (row) {
-            const i = type == 'Margin%' ? bins.findIndex(q => row.vm >= q) : bins.findIndex(q => row.vp >= q);
+
+        const result = electionData.get(key)?.find(r => r.p === trait.party);
+        if (result) {
+            const i = type == 'Margin%' ? bins.findIndex(q => result.vm >= q) : bins.findIndex(q => result.vp >= q);
             const color = colors[i];
             return { fillColor: color, fillOpacity: 0.7, strokeColor: color };
+        }
 
-        }
-        else {
-            console.log('missing data for', key, trait.party);
-        }
+        console.log('missing data for', key, trait.party);
         //return { fillColor: row ? `hsl(240, 100%, ${row.pct * 100}%)` : '#ccc' };
         return { fillColor: '#eee', fillOpacity: 0.4, strokeColor: '#eee' };
     }
