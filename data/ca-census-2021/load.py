@@ -16,7 +16,7 @@ def load(fname, transform, file_mode = 'w'):
 
         # create temp tables so we can avoid duplicate insertions since the /copy command
         # does not support ON CONFLICT DO NOTHING
-        sql.write("create temp table tmp_trait as select * from census_trait with no data; \n")
+        sql.write("create temp table tmp_trait (LIKE census_trait INCLUDING DEFAULTS INCLUDING CONSTRAINTS); \n")
         sql.write("\\copy tmp_trait (census_id, id, name) from import-trait.csv with (format csv);\n")
         sql.write("insert into census_trait select * from tmp_trait on conflict do nothing;\n")
 
@@ -74,7 +74,7 @@ def filter_prov(row):
     if row['GEO_LEVEL'] == 'Territory':
         row['GEO_LEVEL'] = 'Province'
     return row
-load('98-401-X2021001_English_CSV_data.csv', filter_prov)
+#load('98-401-X2021001_English_CSV_data.csv', filter_prov)
 
 # federal ridings (also includes country and provinces)
 def filter_federal_ridings(row):
@@ -89,11 +89,11 @@ def filter_subdivision(row):
     # subdivisions have a type suffix in parentheses
     # e.g. "Cobourg, Town (T)"
     type = re.match(r'.*\((\w+)\)$', row['GEO_NAME'])
-    if row['GEO_LEVEL'] == 'Census subdivision' and type is not None and type.group(1) in ['C', 'CY', 'DM', 'T', 'TP', 'MU']:
+    if row['GEO_LEVEL'] == 'Census subdivision' and type is not None and type.group(1) in ['C', 'CY', 'DM', 'T', 'TP', 'MU', 'V']:
         row['GEO_LEVEL'] = 'SD'
         return row
     return None
-#load('98-401-X2021003_English_CSV_data.csv', filter_subdivision)
+load('98-401-X2021003_English_CSV_data.csv', filter_subdivision)
 
 # dissemination areas
 def filter_da(row):
