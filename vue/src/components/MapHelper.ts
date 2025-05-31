@@ -8,7 +8,7 @@ Licensed under a source-available license. See LICENSE file for details.
 /// <reference types="@types/google.maps" />
 
 import { MapLabel } from './MapLabel';
-import { PoleLabelPlacement } from './PoleLabelPlacement';
+//import { PoleLabelPlacement } from './PoleLabelPlacement';
 
 export type MapFeature = google.maps.Polygon | google.maps.Polyline | google.maps.Marker;
 
@@ -17,9 +17,9 @@ export type MapFeature = google.maps.Polygon | google.maps.Polyline | google.map
  * Polygon.setOptions, Polyline.setOptions, or Marker.setOptions.
  * e.g. strokeColor, strokeWeight, fillColor, fillOpacity, etc.
  */
-export type MapFeatureStylingFunction = (feature: MapFeature, props: any) => google.maps.PolygonOptions | google.maps.PolylineOptions | google.maps.MarkerOptions;
+export type MapFeatureStylingFunction = (feature: MapFeature, props: Record<string, any>) => google.maps.PolygonOptions | google.maps.PolylineOptions | google.maps.MarkerOptions;
 
-export type MapFeatureCallback = (feature: MapFeature, props: any, layer: MapLayer) => void;
+export type MapFeatureActionCallback = (feature: MapFeature, props: Record<string, any>, layer: MapLayer) => void;
 
 /**
  * A map layer represents a collection of geographic features that can be toggled on/off and styled.
@@ -50,9 +50,9 @@ export type MapLayer = {
     /** All IDs of the features in the layer. */
     ids: string[];
     /** Callbacks */
-    onClick?: MapFeatureCallback;
-    onMouseOver?: MapFeatureCallback;
-    onMouseOut?: MapFeatureCallback;
+    onClick?: MapFeatureActionCallback;
+    onMouseOver?: MapFeatureActionCallback;
+    onMouseOut?: MapFeatureActionCallback;
 }
 
 /**

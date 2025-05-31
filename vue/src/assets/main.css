@@ -108,32 +108,28 @@ button:hover, input[type="button"]:hover, a.button:hover {
   overflow-y: auto;
 }
 
-.dialog ul {
+ul li {
+  margin-bottom: 5px;
+}
+
+ul.check-list {
   list-style: none;
   padding: 0;
 }
 
-.dialog ul.cols {
+ul.check-list li label:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+ul.cols {
   height: calc(100% - 70px);
   columns: 20em;
   column-fill: auto;
 }
 
-.dialog ul.mono {
+ul.mono {
   font-family: 'Lucida Console', 'Courier New', Courier, monospace;
-}
-
-.dialog ul li {
-  margin-bottom: 5px;
-}
-
-.dialog ul li.selected {
-  color: red !important;
-}
-
-.dialog ul li label:hover {
-  text-decoration: underline;
-  cursor: pointer;
 }
 
 .radio-list {

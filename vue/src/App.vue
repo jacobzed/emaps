@@ -8,9 +8,7 @@ Typical use would look like this:
 1. User selects a region (province, territory, or state). This is used to limit the UI
 options by only showing relevant boundaries and data for that region.
 
-2. User selects a geographic boundary within the region. This is used to further narrow
-the data that can be loaded. This would typically be a city, electoral district, or other
-administrative boundary.
+2. User selects a city, electoral district, or other administrative boundary with the region.
 
 3. User selects a census or electoral data trait to display on the map.
 Each trait has an associated map ID, which is used to load geographic features for that trait.
@@ -20,189 +18,192 @@ e.g. electoral data will reference voting area (poll) maps
 
 */
 
-<script lang="ts">
+<script setup lang="ts">
+import { ref, onMounted, onErrorCaptured } from "vue";
 import type { Region, Feature, CensusTrait, ElectionTrait } from "./components/api";
 import { getRegions, getCensusTraits, getElectionTraits, getBoundaries } from "./components/api";
 import { purgeCensusData } from "./components/data";
 import Map from "./components/Map.vue";
-import {useToast} from 'vue-toast-notification';
+import { showError } from './components/toast';
 
-const $toast = useToast();
+const dialog = ref<'region' | 'boundary' | 'trait' | 'about' | ''>('');
+const loading = ref(false);
+const regions = ref<Region[]>([]);
+const region = ref<Region | null>(null);
+const boundaries = ref<Feature[]>([]);
+const boundary = ref<Feature | null>(null);
+const censusTraits = ref<CensusTrait[]>([]);
+const electionTraits = ref<ElectionTrait[]>([]);
+const dual = ref(false);
 
-export default {
-    components: {
-        Map,
-    },
-    data() {
-        return {
-            picker: '',
-            loading: false,
-            regions: [] as Region[],
-            region: null as Region | null,
-            boundaries: [] as Feature[],
-            boundary: null as Feature | null,
-            censusTraits: [] as CensusTrait[],
-            electionTraits: [] as ElectionTrait[],
-            dual: false,
-        };
-    },
-    async mounted() {
-        try {
-            this.censusTraits = await getCensusTraits();
-            this.refreshPreferredCensusTraits();
-            this.regions = await getRegions();
+const map1 = ref<InstanceType<typeof Map> | null>(null);
+const map2 = ref<InstanceType<typeof Map> | null>(null);
 
-            if (window.location.hash) {
-                await this.popState();
-            }
-            else {
-                const last = localStorage.getItem('region') || 'BC';
-                const region = this.regions.find(r => r.id == last);
-                this.selectRegion(region!);
-            }
-            window.addEventListener('popstate', this.popState);
+async function selectRegion(selectedRegion: Region, clicked: boolean = false) {
+    dialog.value = '';
+    region.value = selectedRegion;
+    boundaries.value = await getBoundaries(region.value.id);
+    electionTraits.value = await getElectionTraits(region.value.id);
+    loadVisibleElectionTraits();
+    if (clicked) {
+        dialog.value = 'boundary';
+    }
+    localStorage.setItem('region', region.value.id);
+}
 
-        } catch (e) {
-            this.showError(e);
+async function selectBoundary(selectedBoundary: Feature, clicked: boolean = false) {
+    document.title = selectedBoundary.name;
+    dialog.value = '';
+    boundary.value = selectedBoundary;
+    if (map1.value) {
+        await map1.value.selectBoundary(selectedBoundary);
+    }
+    if (map2.value) {
+        await map2.value.selectBoundary(selectedBoundary);
+    }
+    if (clicked) {
+        pushState();
+    }
+}
+
+async function selectRegionAndBoundary(regionId: string, boundaryName: string, clicked: boolean = false) {
+    const targetRegion = regions.value.find(r => r.id === regionId);
+    if (!targetRegion) {
+        return;
+    }
+    if (region.value !== targetRegion) {
+        await selectRegion(targetRegion);
+    }
+
+    const targetBoundary = boundaries.value.find(b => b.name === boundaryName);
+    if (!targetBoundary) {
+        return;
+    }
+    if (boundary.value !== targetBoundary) {
+        await selectBoundary(targetBoundary, clicked);
+    }
+}
+
+function cloneBoundary() {
+    if (boundary.value && map2.value) {
+        map2.value.selectBoundary(boundary.value);
+    }
+}
+
+function showAllRidings() {
+    boundary.value = null;
+    if (map1.value) {
+        map1.value.loadAllRidings();
+    }
+    //showInfo('Showing all federal ridings. Click on a riding to load more information.');
+}
+
+function clickRiding(props: any) {
+    selectRegionAndBoundary(props.region_id, '2025 Riding: ' + props.name, true);
+}
+
+/** Refreshes data after the trait list is customized. */
+async function loadData() {
+    dialog.value = '';
+    saveVisibleTraits();
+    purgeCensusData();
+    if (map1.value) {
+        map1.value.loadData();
+    }
+    if (map2.value) {
+        map2.value.loadData();
+    }
+}
+
+/** Save the user's visible trait selection to local storage. */
+function saveVisibleTraits() {
+    const visibleCensusTraits = censusTraits.value.filter(t => t.visible).map(t => t.id);
+    localStorage.setItem('censusTraits', JSON.stringify(visibleCensusTraits));
+    const visibleElectionTraits = electionTraits.value.filter(t => t.visible).map(t => t.name);
+    localStorage.setItem('electionTraits', JSON.stringify(visibleElectionTraits));
+}
+
+function loadVisibleCensusTraits() {
+    const last = localStorage.getItem('censusTraits');
+    if (!last) {
+        return;
+    }
+    const visibleList = JSON.parse(last) as number[];
+    censusTraits.value.forEach(t => {
+        t.visible = visibleList.includes(t.id);
+    });
+}
+
+function loadVisibleElectionTraits() {
+    const last = localStorage.getItem('electionTraits');
+    if (!last) {
+        return;
+    }
+    const visibleList = JSON.parse(last) as string[];
+    let count = 0;
+    electionTraits.value.forEach(t => {
+        t.visible = visibleList.includes(t.name);
+        if (t.visible) {
+            count++;
         }
-    },
-    methods: {
-        showInfo: function (message: string) {
-            $toast.open({ message, type: 'info', position: 'top-left' });
-        },
-        showError: function (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error(message);
-            $toast.open({ message, type: 'error', position: 'top-left' });
-        },
-        async selectRegion(region: Region, clicked: boolean = false) {
-            this.picker = '';
-            this.region = region;
-            this.boundaries = await getBoundaries(this.region.id);
-            this.electionTraits = await getElectionTraits(this.region.id);
-            this.refreshPreferredElectionTraits();
-            if (clicked) {
-                this.picker = 'boundary';
-            }
-            localStorage.setItem('region', region.id);
-        },
-        async selectBoundary(boundary: Feature, clicked: boolean = false) {
-            document.title = boundary.name;
-            this.picker = '';
-            this.boundary = boundary;
-            await (this.$refs.map1 as InstanceType<typeof Map>).selectBoundary(boundary);
-            if (this.$refs.map2) {
-                await (this.$refs.map2 as InstanceType<typeof Map>).selectBoundary(boundary);
-            }
-            if (clicked) {
-                this.pushState();
-            }
-        },
-        async selectRegionAndBoundary(regionId: string, boundaryName: string, clicked: boolean = false) {
-            const region = this.regions.find(r => r.id === regionId);
-            if (!region) {
-                return;
-            }
-            if (this.region !== region) {
-                await this.selectRegion(region);
-            }
+    });
+    // If traits are ever renamed we will need to reset to the defaults
+    if (count == 0) {
+        electionTraits.value.forEach(t => {
+            t.visible = t.electionId == 44;
+        });
+    }
+}
 
-            const boundary = this.boundaries.find(b => b.name === boundaryName);
-            if (!boundary) {
-                return;
-            }
-            if (this.boundary !== boundary) {
-                await this.selectBoundary(boundary, clicked);
-            }
-        },
-        cloneBoundary() {
-            if (this.boundary) {
-                if (this.$refs.map2) {
-                    (this.$refs.map2 as InstanceType<typeof Map>).selectBoundary(this.boundary);
-                }
-            }
-        },
-        showAllRidings() {
-            this.boundary = null;
-            const map = this.$refs.map1 as InstanceType<typeof Map>;
-            map.loadAllRidings();
-            //this.showInfo('Showing all federal ridings. Click on a riding to load more information.');
-        },
-        clickRiding(props: any) {
-            this.selectRegionAndBoundary(props.region_id, '2025 Riding: ' + props.name, true);
-        },
-        async selectTraits() {
-            this.picker = '';
-            this.savePreferredCensusTraits();
-            this.savePreferredElectionTraits();
-            purgeCensusData();
-            (this.$refs.map1 as InstanceType<typeof Map>).loadData();
-            if (this.$refs.map2) {
-                (this.$refs.map2 as InstanceType<typeof Map>).loadData();
-            }
-        },
-        savePreferredCensusTraits() {
-            const selected = this.censusTraits.filter(t => t.active).map(t => t.id);
-            localStorage.setItem('censusTraits', JSON.stringify(selected));
-        },
-        refreshPreferredCensusTraits() {
-            const last = localStorage.getItem('censusTraits');
-            if (!last) {
-                return;
-            }
-            const selected = JSON.parse(last);
-            this.censusTraits.forEach(t => {
-                t.active = selected.includes(t.id);
-            });
-        },
-        savePreferredElectionTraits() {
-            const selected = this.electionTraits.filter(t => t.active).map(t => t.name);
-            localStorage.setItem('electionTraits', JSON.stringify(selected));
-        },
-        refreshPreferredElectionTraits() {
-            const last = localStorage.getItem('electionTraits');
-            if (!last) {
-                return;
-            }
-            const selected = JSON.parse(last)
-            let count = 0;
-            this.electionTraits.forEach(t => {
-                t.active = selected.includes(t.name);
-                if (t.active) {
-                    count++;
-                }
-            });
-            // If traits are ever renamed we will need to reset to the defaults
-            if (count == 0) {
-                this.electionTraits.forEach(t => {
-                    t.active = t.electionId == 44;
-                });
-            }
-        },
-        pushState() {
-            const url = `#/${this.region?.id}/${this.boundary?.name}`;
-            if (window.location.hash !== url) {
-                window.history.pushState(undefined, '', url);
-            }
-        },
-        async popState() {
-            this.picker = '';
-            const [region, boundary] = window.location.hash.substring(2).split('/').map(s => decodeURIComponent(s));
-            //console.log('popState', region, boundary);
-            this.selectRegionAndBoundary(region, boundary);
-        },
-        indent(text: string) {
-            // convert leading spaces to &nbsp;
-            const count = text.length - text.trimStart().length;
-            return '&nbsp;'.repeat(count);
-        },
-    },
-    errorCaptured(err: unknown) {
-        this.loading = false;
-        this.showError(err);
-        return false;
-    },
+function pushState() {
+    const url = `#/${region.value?.id}/${boundary.value?.name}`;
+    if (window.location.hash !== url) {
+        window.history.pushState(undefined, '', url);
+    }
+}
+
+function popState() {
+    dialog.value = '';
+    const [regionId, boundaryName] = window.location.hash.substring(2).split('/').map(s => decodeURIComponent(s));
+    //console.log('popState', regionId, boundaryName);
+    selectRegionAndBoundary(regionId, boundaryName);
+}
+
+function indent(text: string) {
+    // convert leading spaces to &nbsp;
+    const count = text.length - text.trimStart().length;
+    return '&nbsp;'.repeat(count);
 };
+
+onMounted(async () => {
+    try {
+        censusTraits.value = await getCensusTraits();
+        loadVisibleCensusTraits();
+        regions.value = await getRegions();
+
+        if (window.location.hash) {
+            popState();
+        }
+        else {
+            const last = localStorage.getItem('region') || 'BC';
+            const targetRegion = regions.value.find(r => r.id == last);
+            if (targetRegion) {
+                selectRegion(targetRegion);
+            }
+        }
+        window.addEventListener('popstate', popState);
+
+    } catch (e) {
+        showError(e);
+    }
+})
+
+onErrorCaptured((err: unknown) => {
+    loading.value = false;
+    showError(err);
+    return false;
+});
+
 </script>
 
 <template>
@@ -211,16 +212,16 @@ export default {
             <h1>Electoral Maps .ca</h1>
         </div>
         <div>
-            <a href="#" @click.prevent="picker = 'region'" class="dropdown">{{ region ? region.name : "Select..." }}</a>
+            <a href="#" @click.prevent="dialog = 'region'" class="dropdown">{{ region ? region.name : "Select..." }}</a>
         </div>
         <div v-if="region">
-            <a href="#" @click.prevent="picker = 'boundary'" class="dropdown">{{ boundary ? boundary.name : "Select..." }}</a>
+            <a href="#" @click.prevent="dialog = 'boundary'" class="dropdown">{{ boundary ? boundary.name : "Select..." }}</a>
         </div>
         <div>
             <a href="#" @click="showAllRidings">Show All Ridings</a>
         </div>
         <div>
-            <a href="#" @click.prevent="picker = 'about'">About</a>
+            <a href="#" @click.prevent="dialog = 'about'">About</a>
         </div>
         <div style="flex: 1; display: flex; gap: 10px; justify-content: right;">
             <input type="checkbox" v-model="dual" class="toggler" title="Toggle split view map mode" />
@@ -234,27 +235,27 @@ export default {
         <Map
             ref="map1"
             key="map1"
-            :censusTraits="censusTraits.filter((t) => t.active)"
+            :censusTraits="censusTraits.filter((t) => t.visible)"
             :electionTraits="electionTraits"
-            @customize="picker = 'trait'"
+            @customize="dialog = 'trait'"
             @loading="loading = $event"
             @click="clickRiding"
         />
         <Map
             ref="map2"
             key="map2"
-            :censusTraits="censusTraits.filter((t) => t.active)"
+            :censusTraits="censusTraits.filter((t) => t.visible)"
             :electionTraits="electionTraits"
-            @customize="picker = 'trait'"
+            @customize="dialog = 'trait'"
             @mounted="cloneBoundary"
             @loading="loading = $event"
             v-if="dual"
         />
     </div>
 
-    <div class="dialog-bg" v-show="picker != ''"></div>
+    <div class="dialog-bg" v-show="dialog != ''"></div>
 
-    <div class="dialog" v-show="picker == 'region'">
+    <div class="dialog" v-show="dialog == 'region'">
         <p>Select a region:</p>
         <ul class="cols">
             <li v-for="r in regions" :key="r.id">
@@ -263,7 +264,7 @@ export default {
         </ul>
     </div>
 
-    <div class="dialog" v-show="picker == 'boundary'">
+    <div class="dialog" v-show="dialog == 'boundary'">
         <p>Select a boundary (federal ridings available in 2013 and 2023 representation orders, cities use census subdivisions which generally correspond to municipal boundaries): </p>
         <ul class="cols">
             <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
@@ -272,32 +273,45 @@ export default {
         </ul>
     </div>
 
-    <div class="dialog" v-show="picker == 'trait'">
+    <div class="dialog" v-show="dialog == 'trait'">
         <div style="position: sticky; top: -20px; background-color: #fff; z-index: 1; padding: 10px 0;">
-            <p><input type="button" value="Save Changes..." @click.prevent="selectTraits()" /></p>
+            <p><input type="button" value="Save Changes..." @click.prevent="loadData()" /></p>
         </div>
-        <ul>
+        <ul class="check-list">
             <li><strong>Election Traits:</strong></li>
             <li v-for="t in electionTraits">
-                <label><input type="checkbox" v-model="t.active" :key="t.name" />{{ t.name }}</label>
+                <label><input type="checkbox" v-model="t.visible" :key="t.name" />{{ t.name }}</label>
             </li>
         </ul>
-        <ul>
+        <ul class="check-list">
             <li><strong>Census Traits:</strong></li>
             <li v-for="t in censusTraits">
-                <label><input type="checkbox" v-model="t.active" :key="t.id" /><span class="trait-id">{{ t.id }}</span><span v-html="indent(t.name)"></span>{{ t.name }}</label>
+                <label><input type="checkbox" v-model="t.visible" :key="t.id" /><span class="trait-id">{{ t.id }}</span><span v-html="indent(t.name)"></span>{{ t.name }}</label>
             </li>
         </ul>
     </div>
 
-    <div class="dialog" v-show="picker == 'about'">
+    <div class="dialog" v-show="dialog == 'about'">
+
+        <p>This site currently contains data for:</p>
+        <ul>
+            <li>2021 Canadian Census</li>
+            <li>2019 Canadian General Election</li>
+            <li>2021 Canadian General Election</li>
+            <li>2025 Ontario General Election</li>
+        </ul>
+        <p>Data for the following is not available yet:</p>
+        <ul>
+            <li>2025 Canadian General Election</li>
+            <li>2024 British Columbia General Election</li>
+        </ul>
 
         <p>Census data is provided by Statistics Canada. 2023. Census Profile. 2021 Census of Population. Statistics Canada Catalogue number 98-316-X2021001. Ottawa. Released November 15, 2023.</p>
         <p>Reproduced and distributed on an "as is" basis with the permission of Statistics Canada.</p>
 
         <p>I can be reached at contact@electoralmaps.ca</p>
 
-        <p><button type="button" @click="picker = ''">Close</button></p>
+        <p><button type="button" @click="dialog = ''">Close</button></p>
 
     </div>
 </template>

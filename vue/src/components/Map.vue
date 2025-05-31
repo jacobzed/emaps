@@ -10,174 +10,186 @@ It is tightly coupled with the backend API.
 
 */
 
-<script lang="ts">
-import { shallowRef, type PropType } from 'vue';
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, type PropType } from 'vue';
 import { MapHelper, type MapFeature, type MapLayer } from './MapHelper';
 import type { Region, Feature, CensusTrait, ElectionTrait } from './api';
-import { getBoundingBoxFeatures, getFeature, getFeatures, getIntersectingFeatures } from './api';
+import { getFeature, getFeatures, getIntersectingFeatures } from './api';
 import type { Tooltip, Legend } from './data';
 import { loadElectionData, loadCensusData, purgeCensusData, getTooltip } from './data';
 
-
-export default {
-  name: 'Map',
-  props: {
+const props = defineProps({
     censusTraits: {
-      type: Array as PropType<CensusTrait[]>,
-      required: true
+        type: Array as PropType<CensusTrait[]>,
+        required: true,
     },
     electionTraits: {
-      type: Array as PropType<ElectionTrait[]>,
-      required: true
+        type: Array as PropType<ElectionTrait[]>,
+        required: true,
+    },
+});
+
+const emit = defineEmits(['customize', 'mounted', 'loading', 'click']);
+
+const trait = ref<CensusTrait | ElectionTrait | null>(null);
+const legend = ref<Legend | null>(null);
+const tooltip = ref<Tooltip | null>(null);
+const boundary = ref<Feature | null>(null);
+const mapdiv = ref<HTMLElement | null>(null);
+
+
+let map: MapHelper = null!;
+
+onMounted(async () => {
+    console.log('creating map instance...');
+    if (mapdiv.value) {
+        map = new MapHelper(mapdiv.value as HTMLElement);
     }
-  },
-  emits: ['customize', 'mounted', 'loading', 'click'],
-  data: function () {
-    return {
-      trait: null as CensusTrait | ElectionTrait | null,
-      legend: null as Legend | null,
-      tooltip: null as Tooltip | null,
-      boundary: null as Feature | null,
-    }
-  },
-  setup() {
-    // This setup is used to create a non-reactive map reference.
-    // Putting the map reference in data() and making it reactive creates subtle bugs
-    return {
-      //map: shallowRef<MapHelper>(null!),
-      map: null! as MapHelper,
-    }
-  },
-  async mounted() {
-    console.log('creating map instance...')
-    this.map = new MapHelper(this.$refs.mapdiv as HTMLElement);
     // experiment with only loading ridings within the map bounds
-    // this.map.onBoundsChanged = async () => {
-    //   const zoom = this.map.getZoom();
-    //   const bounds = this.map.getBounds().toJSON();
-    //   console.log(zoom, bounds);
-    //   const geojson = await getBoundingBoxFeatures(30, zoom, bounds);
-    //   const layer = this.map.addLayer({ name: 'Ridings', label: 'name', labelMinZoom: 11 }, geojson);
-    //   this.map.showLayer(layer);
-    // };
+    // if (map.value) {
+    //   map.value.onBoundsChanged = async () => {
+    //     const zoom = map.value!.getZoom();
+    //     const bounds = map.value!.getBounds().toJSON();
+    //     console.log(zoom, bounds);
+    //     const geojson = await getBoundingBoxFeatures(30, zoom, bounds);
+    //     const layer = map.value!.addLayer({ name: 'Ridings', label: 'name', labelMinZoom: 11 }, geojson);
+    //     map.value!.showLayer(layer);
+    //   };
+    // }
 
-    this.$emit('mounted');
-  },
-  unmounted() {
-    console.log('destroying map instance...')
-    if (this.map) {
-      this.map.destroy();
+    emit('mounted');
+});
+
+onUnmounted(() => {
+    console.log('destroying map instance...');
+    if (map) {
+        map.destroy();
     }
-  },
-  methods: {
-    async selectBoundary(boundary: Feature) {
-      this.boundary = boundary;
-      const geojson = await getFeature(this.boundary.mapId, this.boundary.featureId);
-      // Convert the Polygon features to LineString geometry so the MapHelper displays them as polylines.
-      geojson.features.forEach((f: any) => {
+});
+
+/** Select a feature to display as the boundary area. */
+async function selectBoundary(selected: Feature) {
+    boundary.value = selected;
+
+    const geojson = await getFeature(boundary.value.mapId, boundary.value.featureId);
+    // Convert the Polygon features to LineString geometry so the MapHelper displays them as polylines.
+    geojson.features.forEach((f: any) => {
         f.geometry.type = f.geometry.type.replace('Polygon', 'LineString');
-      });
-      const layer = this.map.addLayer({ name: 'Boundary' }, geojson);
-      this.map.showLayer(layer);
-      this.tooltip = null;
+    });
+    const layer = map.addLayer({ name: 'Boundary' }, geojson);
+    map.showLayer(layer);
+    tooltip.value = null;
 
-      // If no trait is selected, select the first census trait
-      if (this.trait == null) {
-        const traits = this.censusTraits.filter(t => t.active);
-        if (traits.length > 0) {
-          this.trait = traits[0];
+    // If no trait is selected, select the first census trait
+    if (trait.value == null) {
+        const activeCensusTraits = props.censusTraits.filter((t) => t.visible);
+        if (activeCensusTraits.length > 0) {
+            trait.value = activeCensusTraits[0];
         }
-      }
-      await this.loadFeatures();
-      await this.loadData();
-    },
-    async selectTrait(trait: CensusTrait | ElectionTrait) {
-      console.log(trait);
-      this.trait = trait;
-      await this.loadFeatures();
-      await this.loadData();
-    },
-    /** Load the features for the selected trait. */
-    async loadFeatures() {
-      if (!this.boundary || !this.trait)
-        return;
+    }
+    await loadFeatures();
+    await loadData();
+}
 
-      // Most traits will be sharing a map, so we can use a previously loaded map most of the time.
-      const name = 'Map-' + this.trait.mapId + '-' + this.boundary.mapId + '-' + this.boundary.featureId;
-      let layer = this.map.findLayer(name);
-      if (layer) {
-        this.map.showLayer(layer);
-        return;
-      }
+/** Change the active trait on the map. */
+async function selectTrait(selected: CensusTrait | ElectionTrait) {
+    console.log(selected);
+    trait.value = selected;
+    await loadFeatures();
+    await loadData();
+}
 
-      this.$emit('loading', true);
-      const geojson = await getIntersectingFeatures(this.trait.mapId, this.boundary.mapId, this.boundary.featureId);
-      this.$emit('loading', false);
-      if (!geojson.features) {
+/** Load features for the selected trait. Census traits will load DA maps, election traits will load poll maps. */
+async function loadFeatures() {
+    if (!boundary.value || !trait.value) return;
+
+    // Most traits will be sharing a map, so we can use a previously loaded map most of the time.
+    const name = 'Map-' + trait.value.mapId + '-' + boundary.value.mapId + '-' + boundary.value.featureId;
+    let layer = map.findLayer(name);
+    if (layer) {
+        map.showLayer(layer);
+        return;
+    }
+
+    emit('loading', true);
+    const geojson = await getIntersectingFeatures(trait.value.mapId, boundary.value.mapId, boundary.value.featureId);
+    emit('loading', false);
+    if (!geojson.features) {
         console.error('No features found for ' + name);
         return;
-      }
+    }
 
-      layer = this.map.addLayer({ name, label: 'id', onMouseOver: this.onMouseOver, onMouseOut: this.onMouseOut }, geojson);
-      this.map.showLayer(layer);
-    },
-    /** Load data for the selected trait. */
-    async loadData() {
-      const layer = this.map.activeLayer();
-      //console.log('loading data for trait', this.trait, layer);
-      if (!this.boundary || !this.trait || !layer)
-        return;
-
-      this.$emit('loading', true);
-      if (this.trait.type == 'election') {
-        this.legend = await loadElectionData(layer, this.trait);
-      } else if (this.trait.type == 'census') {
-        this.legend = await loadCensusData(layer, this.trait, this.censusTraits.filter(t => t.active));
-      }
-      this.$emit('loading', false);
-
-      // The load functions above will have assigned the getStyle callback to the layer
-      this.map.refreshLayer(layer);
-
-    },
-    /** Load all federal riding features. */
-    async loadAllRidings() {
-      this.map.hideAllLayers();
-      this.boundary = null;
-      this.legend = null;
-
-      let layer = this.map.findLayer('Ridings');
-      if (layer) {
-        this.map.showLayer(layer);
-        return;
-      }
-      const geojson = await getFeatures(32);
-      const onClick = (feature: MapFeature, props: any, layer: MapLayer) => {
-        this.$emit('click', props);
-      };
-      layer = this.map.addLayer({ name: 'Ridings', label: 'name', labelMinZoom: 11, onClick, onMouseOver: this.onMouseOverRiding, onMouseOut: this.onMouseOut }, geojson);
-      this.map.showLayer(layer);
-    },
-    onMouseOver(feature: MapFeature, props: any) {
-      if (this.trait) {
-        this.tooltip = getTooltip(props, this.trait);
-      }
-    },
-    onMouseOut(feature: MapFeature, props: any) {
-      this.tooltip = null;
-    },
-    onMouseOverRiding(feature: MapFeature, props: any) {
-      this.tooltip = { type: 'election', title: props.name, results: [], notes: 'Click to load the election results and census data for this riding.' };
-    },
-    getLocation() {
-      const center = this.map.getCenter();
-      const zoom = this.map.getZoom();
-      const bounds = this.map.getBounds();
-      return { lat: center.lat(), lng: center.lng(), zoom, bounds: bounds.toJSON() };
-    },
-  },
+    layer = map.addLayer({ name, label: 'id', onMouseOver: onMouseOver, onMouseOut: onMouseOut }, geojson);
+    map.showLayer(layer);
 }
+
+/** Load data for the selected trait and active map features. */
+async function loadData() {
+    const layer = map.activeLayer();
+    //console.log('loading data for trait', trait.value, layer);
+    if (!boundary.value || !trait.value || !layer) return;
+
+    emit('loading', true);
+    if (trait.value.type == 'election') {
+        legend.value = await loadElectionData(layer, trait.value);
+    } else if (trait.value.type == 'census') {
+        legend.value = await loadCensusData(layer, trait.value, props.censusTraits.filter(t => t.visible));
+    }
+    emit('loading', false);
+
+    // The load functions above will have assigned the getStyle callback to the layer
+    map.refreshLayer(layer);
+}
+
+/** Load all federal riding features. */
+async function loadAllRidings() {
+    map.hideAllLayers();
+    boundary.value = null;
+    legend.value = null;
+
+    let layer = map.findLayer('Ridings');
+    if (layer) {
+        map.showLayer(layer);
+        return;
+    }
+    const geojson = await getFeatures(32);
+    const onClick = (feature: MapFeature, featureProps: any, mapLayer: MapLayer) => {
+        emit('click', featureProps);
+    };
+    layer = map.addLayer({ name: 'Ridings', label: 'name', labelMinZoom: 11, onClick, onMouseOver: onMouseOverRiding, onMouseOut: onMouseOut, }, geojson);
+    map.showLayer(layer);
+}
+
+function onMouseOver(feature: MapFeature, featureProps: any) {
+    if (trait.value) {
+        tooltip.value = getTooltip(featureProps, trait.value);
+    }
+}
+
+function onMouseOut(feature: MapFeature, featureProps: any) {
+    tooltip.value = null;
+}
+
+function onMouseOverRiding(feature: MapFeature, featureProps: any) {
+    tooltip.value = { type: 'election', title: featureProps.name,  results: [], notes: 'Click to load the election results and census data for this riding.' };
+}
+
+function getLocation() {
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    const bounds = map.getBounds();
+    return { lat: center.lat(), lng: center.lng(), zoom, bounds: bounds.toJSON() };
+}
+
+
+defineExpose({
+    loadAllRidings,
+    loadData,
+    selectBoundary,
+});
 </script>
+
+
 
 <template>
 
@@ -186,10 +198,10 @@ export default {
     <div>
       <div class="radio-list" v-show="boundary && !tooltip">
         <p><a href="#" @click.prevent="$emit('customize')" class="button">Customize layers...</a></p>
-        <label v-for="t in electionTraits.filter(t => t.active)">
+        <label v-for="t in electionTraits.filter(t => t.visible)">
           <input type="radio" v-model="trait" :value="t" :key="t.name" @click="selectTrait(t)">{{ t.name }}
         </label>
-        <label v-for="t in censusTraits.filter(t => t.active)">
+        <label v-for="t in censusTraits.filter(t => t.visible)">
           <input type="radio" v-model="trait" :value="t" :key="t.id" @click="selectTrait(t)"><span v-if="t.category" v-bind:title="'#' + t.id">{{ t.category }}: </span>{{ t.name }}
         </label>
       </div>

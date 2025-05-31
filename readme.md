@@ -4,6 +4,19 @@ Interactive Canadian electoral maps with poll-level detail for past election res
 
 You can see it live here: https://www.electoralmaps.ca
 
+Typical use would look like this:
+
+1. User selects a region (province, territory, or state). This is used to limit the UI
+options by only showing relevant boundaries and data for that region.
+
+2. User selects a city, electoral district, or other administrative boundary with the region.
+
+3. User selects a census or electoral data trait to display on the map.
+Each trait has an associated map ID, which is used to load geographic features for that trait.
+Those features are then color coded based on the associated data.
+e.g. census data will reference census DA maps
+e.g. electoral data will reference voting area (poll) maps
+
 # Requirements
 
 * Postgres 16 + PostGIS
@@ -25,7 +38,6 @@ Since the data processing for this database is mostly adhoc one-offs, these scri
 
 ## /gis
 Geospatial import scripts.
-
 
 # License
 

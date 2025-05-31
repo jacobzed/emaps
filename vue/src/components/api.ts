@@ -13,7 +13,7 @@ export type CensusTrait = {
     name: string;
     category: string;
     description: string;
-    active: boolean;
+    visible: boolean;
     mapId: number;
     isRate: boolean;
 }
@@ -39,7 +39,7 @@ export type ElectionTrait = {
     electionId: number;
     name: string;
     party: string;
-    active: boolean;
+    visible: boolean;
     mapId: number;
 }
 
