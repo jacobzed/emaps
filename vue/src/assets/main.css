@@ -126,6 +126,7 @@ ul.cols {
   height: calc(100% - 70px);
   columns: 20em;
   column-fill: auto;
+  padding-left: 1em;
 }
 
 ul.mono {

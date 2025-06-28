@@ -64,14 +64,14 @@ namespace EMapper.Services
 
                 -- get 343 ridings from the 2023 federal representation order
                 UNION
-                SELECT region_id as regionid, map_id as mapid, id as featureid, '2025 Riding: ' || name as name, 1
+                SELECT region_id as regionid, map_id as mapid, id as featureid, '2023 Riding: ' || name as name, 1
                 FROM map_shp
                 WHERE map_id = 30 
                 AND region_id = @region
 
                 -- get 338 ridings from the 2013 federal representation order
                 UNION
-                SELECT region_id as regionid, map_id as mapid, id as featureid, '2021 Riding: ' || name as name, 2
+                SELECT region_id as regionid, map_id as mapid, id as featureid, '2013 Riding: ' || name as name, 2
                 FROM map_shp
                 WHERE map_id = 20 
                 AND region_id = @region

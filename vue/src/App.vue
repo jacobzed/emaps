@@ -99,7 +99,7 @@ function showAllRidings() {
 }
 
 function clickRiding(props: any) {
-    selectRegionAndBoundary(props.region_id, '2025 Riding: ' + props.name, true);
+    selectRegionAndBoundary(props.region_id, '2023 Riding: ' + props.name, true);
 }
 
 /** Refreshes data after the trait list is customized. */
@@ -256,7 +256,7 @@ onErrorCaptured((err: unknown) => {
     <div class="dialog-bg" v-show="dialog != ''"></div>
 
     <div class="dialog" v-show="dialog == 'region'">
-        <p>Select a region:</p>
+        <p>Please select your province:</p>
         <ul class="cols">
             <li v-for="r in regions" :key="r.id">
                 <a href="#" @click.prevent="selectRegion(r, true);">{{ r.name }}</a>
@@ -265,7 +265,11 @@ onErrorCaptured((err: unknown) => {
     </div>
 
     <div class="dialog" v-show="dialog == 'boundary'">
-        <p>Select a boundary (federal ridings available in 2013 and 2023 representation orders, cities use census subdivisions which generally correspond to municipal boundaries): </p>
+        <p>Please select your electoral boundary. This site gives you the flexibility to view any election results independently of which boundary was used in the original election.
+            You can see election results exactly as they appeared, or you can also view past election results as they would have looked in a redrawn boundary.
+            If you are running a municipal election, you can view federal and provincial election results just within your municipal boundary.</p>
+        <p>The 2021, 2019, and 2015 federal elections used the 2021 riding representation.</p>
+        <p><strong>The 2025 federal election used the 2023 riding representation.</strong></p>
         <ul class="cols">
             <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
                 <a href="#" @click.prevent="selectBoundary(b, true)">{{ b.name }}</a>
