@@ -7,7 +7,7 @@ function toast(message: string, type: 'success' | 'error' | 'warning' | 'info' =
     $toast.default(message, { position: 'top-right', type });
 }
 
-export function showError(error: any): void {
+export function showError(error: unknown): void {
     if (error instanceof Error) {
         toast(error.message, 'error');
     } else if (typeof error === 'string') {

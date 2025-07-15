@@ -90,10 +90,12 @@ function cloneBoundary() {
     }
 }
 
-function showAllRidings() {
+async function showAllRidings() {
     boundary.value = null;
     if (map1.value) {
-        map1.value.loadAllRidings();
+        loading.value = true;
+        await map1.value.loadAllRidings();
+        loading.value = false;
     }
     //showInfo('Showing all federal ridings. Click on a riding to load more information.');
 }
@@ -268,8 +270,8 @@ onErrorCaptured((err: unknown) => {
         <p>Please select your electoral boundary. This site gives you the flexibility to view any election results independently of which boundary was used in the original election.
             You can see election results exactly as they appeared, or you can also view past election results as they would have looked in a redrawn boundary.
             If you are running a municipal election, you can view federal and provincial election results just within your municipal boundary.</p>
-        <p>The 2021, 2019, and 2015 federal elections used the 2021 riding representation.</p>
-        <p><strong>The 2025 federal election used the 2023 riding representation.</strong></p>
+        <p>The 2015, 2019, and 2021 federal general elections used the 2021 riding representation.</p>
+        <p><strong>The 2025 federal general election used the 2023 riding representation.</strong></p>
         <ul class="cols">
             <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
                 <a href="#" @click.prevent="selectBoundary(b, true)">{{ b.name }}</a>

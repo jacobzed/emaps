@@ -36,8 +36,8 @@ export function getPartyColor(name: string): string {
     return colorCodes[name] ?? colorCodes.Other;
 }
 
-/** Get a color scheme closely related to a base color.  */
-export function getColorScheme(base: string): string[] {
+/** Get a color scheme derived from the hue of a base color. */
+export function getColorScheme(base: string, count: number = 4): string[] {
     const hsl = base.match(/hsl\((\d+),\s?(\d+)%,\s?(\d+)%\)/);
     if (!hsl) {
         return getColorScheme(colorCodes[base] ?? colorCodes.Other);
@@ -47,11 +47,11 @@ export function getColorScheme(base: string): string[] {
     const s = parseInt(hsl[2]) / 100;
     const l = parseInt(hsl[3]) / 100;
 
-    // create 3 lighter variants of the base color
-    for (let i = 0; i < 3; i++) {
+    // add base color and some lighter shades
+    for (let i = 0; i < count - 1; i++) {
         colors.push(hslToRgb(h, s - i * 0.05, l + i * 0.2));
     }
-    // worst segment should be light grey
+    // last entry should be light grey
     colors.push('#dddddd');
 
     return colors;

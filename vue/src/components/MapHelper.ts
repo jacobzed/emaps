@@ -17,42 +17,43 @@ export type MapFeature = google.maps.Polygon | google.maps.Polyline | google.map
  * Polygon.setOptions, Polyline.setOptions, or Marker.setOptions.
  * e.g. strokeColor, strokeWeight, fillColor, fillOpacity, etc.
  */
-export type MapFeatureStylingFunction = (feature: MapFeature, props: Record<string, any>) => google.maps.PolygonOptions | google.maps.PolylineOptions | google.maps.MarkerOptions;
+export type MapFeatureStylingCallback = (feature: MapFeature, props: Record<string, any>) => google.maps.PolygonOptions | google.maps.PolylineOptions | google.maps.MarkerOptions;
 
-export type MapFeatureActionCallback = (feature: MapFeature, props: Record<string, any>, layer: MapLayer) => void;
+export type MapFeatureEventCallback = (feature: MapFeature, props: Record<string, any>, layer: MapLayer) => void;
 
 /**
- * A map layer represents a collection of geographic features that can be toggled on/off and styled.
+ * A map layer represents a collection of geographic features (all of the same type).
+ * Each feature can be custom styled.
 */
 export type MapLayer = {
     name: string;
-    /** Display type for layer:
+    /** Display type for layer. GeoJSON types are mapped as:
      * Polygon/MultiPolygon => polygon,
      * LineString => polyline,
      * Point => point */
     type?: 'point' | 'polygon' | 'polyline';
-    /** Function to customize google maps styling options for selected feature. */
-    getStyle?: MapFeatureStylingFunction;
+    /** Callback function to customize google maps styling for each feature. */
+    getStyle?: MapFeatureStylingCallback;
     /** Geographic features of the layer.
      * The following custom properties can be accessed via feature.get('...')
      * 'props' contains the feature's properties.
      * 'label' contains the feature's label.
      */
     features: any[];
-    /** Selected features. */
+    /** Selected features. Not currently implemented. */
     selected: any[];
     /** Optional property name to display as a label for each feature. */
     label?: string;
-    /** Current visibility state of the layer. */
+    /** Current visibility of the layer. */
     visible: boolean;
     /** Bounds containing all features of the layer. */
     bounds: google.maps.LatLngBounds;
     /** All IDs of the features in the layer. */
     ids: string[];
     /** Callbacks */
-    onClick?: MapFeatureActionCallback;
-    onMouseOver?: MapFeatureActionCallback;
-    onMouseOut?: MapFeatureActionCallback;
+    onClick?: MapFeatureEventCallback;
+    onMouseOver?: MapFeatureEventCallback;
+    onMouseOut?: MapFeatureEventCallback;
 }
 
 /**
@@ -163,7 +164,7 @@ export class MapHelper {
         return this.layers.find(l => l.name == name);
     }
 
-    /** Get the active polygon layer. */
+    /** Get the visible polygon layer. Only a single polygon layer can be visible at a time. */
     activeLayer() {
         return this.layers.find(l => l.visible && l.type == 'polygon');
     }
@@ -210,8 +211,8 @@ export class MapHelper {
 
                 // Polygons are an array of paths,
                 // each path is an array of coordinates.
-                // If a polygon has multiple paths, the first path is the outer ring and secondary paths
-                // are typically holes that should follow the right-hand rule.
+                // If a polygon has multiple paths, clockwise paths are exterior rings
+                // and counter-clockwise paths are interior rings (holes).
                 const paths = feature.geometry.coordinates.map((c: any) => c.map((p: any) => new google.maps.LatLng(p[1], p[0])));
                 for (const path of paths) {
                     for (const coord of path) {
@@ -364,6 +365,7 @@ export class MapHelper {
 
     }
 
+    /** Highlight a feature by changing its style. */
     private setHighlight(feature: google.maps.Polygon) {
         const label = feature.get('label');
         feature.setOptions(this.defaultHighlightOptions);
@@ -372,6 +374,7 @@ export class MapHelper {
         }
     }
 
+    /** Cancel highlight of a feature by restoring its default style. */
     private cancelHighlight(feature: google.maps.Polygon, layer: MapLayer) {
         const label = feature.get('label');
         const props = feature.get('props');
@@ -415,7 +418,7 @@ export class MapHelper {
         layer.visible = true;
     }
 
-    /** Hide the active layer and the outline layer. */
+    /** Hide all visible layers. */
     hideAllLayers() {
         for (const l of this.layers) {
             if (l.visible) {
@@ -424,7 +427,7 @@ export class MapHelper {
         }
     }
 
-    /** Hide a layer by removing it from the map. */
+    /** Hide a layer. */
     hideLayer(layer: MapLayer) {
         for (const f of layer.features) {
             f.setMap(null);

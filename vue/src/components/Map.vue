@@ -93,7 +93,7 @@ async function selectBoundary(selected: Feature) {
 
 /** Change the active trait on the map. */
 async function selectTrait(selected: CensusTrait | ElectionTrait) {
-    console.log(selected);
+    //console.log(selected);
     trait.value = selected;
     await loadFeatures();
     await loadData();

@@ -120,11 +120,12 @@ export async function getElectionTraits(regionId: string) : Promise<ElectionTrai
         throw new Error(data.message);
     }
     return data.results
-        .map((trait: any) => ({
+        .map((trait: ElectionTrait) => ({
             ...trait,
             type: 'election',
-            active: trait.electionId == 44,
-        }))
+            //visible: trait.electionId == 44,
+            visible: trait.name.includes('Winner'),
+        }));
 }
 
 /**
@@ -207,7 +208,7 @@ export async function getCensusTraits() : Promise<CensusTrait[]> {
         .map((trait: any) => ({
             ...trait,
             type: 'census',
-            active: data.suggested.includes(trait.id),
+            visible: data.suggested.includes(trait.id),
         }));
 }
 
