@@ -108,6 +108,10 @@ button:hover, input[type="button"]:hover, a.button:hover {
   overflow-y: auto;
 }
 
+ul {
+    padding-left: 1em;
+}
+
 ul li {
   margin-bottom: 5px;
 }

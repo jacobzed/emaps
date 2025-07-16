@@ -56,7 +56,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapRazorPages();
 
-// Global error handling middleware (declared after MapRazorPages to catch API erors only)
+// Global error handling middleware (declared after MapRazorPages to catch API errors only)
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -97,12 +97,6 @@ app.Use(async (context, next) =>
 
 
 
-/*
-For strict request optimization we could consolidate:
-/region and /census/traits - they are both loaded on page init
-/region/{region}/features and /region/{region}/elections - they are both loaded on region change
-
-*/
 
 app.MapGet("/api/region", async ([FromServices] DataService dataService) =>
 {
@@ -115,7 +109,6 @@ app.MapGet("/api/region/{region}/features", async ([FromServices] MapService map
     var results = await mapService.GetRegionFeatures(region);
     return Results.Json(new { results });
 });
-
 
 app.MapGet("/api/region/{region}/elections", async ([FromServices] DataService dataService, string region) =>
 {
@@ -165,7 +158,7 @@ app.MapGet("/api/census/trait", async ([FromServices] DataService dataService) =
     // To simplify the first iteration of the UI, I'm going to hardcode the censusId
     var censusId = 1;
     var results = await dataService.GetCensusTraits(censusId);
-    int[] suggested = [ 1, 9, 13, 24, 42, 60, 66, 1685, 1686, 113 ];
+    int[] suggested = [ 1, 9, 13, 24, 42, 60, 66, 1685, 1686, 113, 243 ];
     return Results.Json(new { results, suggested });
 });
 

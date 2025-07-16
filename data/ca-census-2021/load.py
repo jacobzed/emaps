@@ -21,7 +21,7 @@ def load(fname, transform, file_mode = 'w'):
         sql.write("insert into census_trait select * from tmp_trait on conflict do nothing;\n")
 
         sql.write("create temp table temp_geo as select * from census_geo with no data; \n")
-        sql.write("\\copy temp_geo (census_id, type, id, name) from import-geo.csv with (format csv);\n")
+        sql.write("\\copy temp_geo (census_id, type, id, name, notes) from import-geo.csv with (format csv);\n")
         sql.write("insert into census_geo select * from temp_geo on conflict do nothing;\n")
 
         sql.write("create temp table temp_data as select * from census_data with no data; \n")
@@ -58,13 +58,13 @@ def load(fname, transform, file_mode = 'w'):
                     trait_writer.writerow(trait_row)
 
                 # output columns in same order as "geo" table
-                geo_row = (census_id, row['GEO_LEVEL'], row['ALT_GEO_CODE'], row['GEO_NAME'])
+                geo_row = (census_id, row['GEO_LEVEL'], row['ALT_GEO_CODE'], row['CITY_NAME'], row['CITY_TYPE'])
                 if hash(geo_row) not in dupes:
                     dupes.add(hash(geo_row))
                     geo_writer.writerow(geo_row)
 
 
-    print(count, 'rows prepared, run psql -d census -f import.sql')
+    print(count, 'rows prepared, run psql -d census2 -f import.sql')
 
 # psql -d census -f import.sql
 
@@ -86,11 +86,15 @@ def filter_federal_ridings(row):
 
 # subdivisions (cities, towns, etc.)
 def filter_subdivision(row):
+    if row['GEO_LEVEL'] != 'Census subdivision':
+        return None
     # subdivisions have a type suffix in parentheses
     # e.g. "Cobourg, Town (T)"
-    type = re.match(r'.*\((\w+)\)$', row['GEO_NAME'])
-    if row['GEO_LEVEL'] == 'Census subdivision' and type is not None and type.group(1) in ['C', 'CY', 'DM', 'T', 'TP', 'MU', 'V']:
-        row['GEO_LEVEL'] = 'SD'
+    geoname = re.match(r'^(.+?), .+?\((.+)\)$', row['GEO_NAME'])
+    row['CITY_NAME'] = geoname.group(1)
+    row['CITY_TYPE'] = geoname.group(2)
+    row['GEO_LEVEL'] = 'SD'
+    if row['CITY_TYPE'] in ['C', 'CY', 'DM', 'T', 'TP', 'MU', 'V']:
         return row
     return None
 load('98-401-X2021003_English_CSV_data.csv', filter_subdivision)

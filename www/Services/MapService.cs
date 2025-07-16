@@ -22,6 +22,7 @@ namespace EMapper.Services
         public int MapId { get; set; }
         public required string FeatureId { get; set; }
         public required string Name { get; set; }
+        public required string Category { get; set; }
     }
 
     public class GeoJson
@@ -57,24 +58,34 @@ namespace EMapper.Services
         public async Task<IEnumerable<MapFeature>> GetRegionFeatures(string region)
         {
             return await db.QueryAsync<MapFeature>(@"
-                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 3
+                SELECT region_id as regionid, map_id as mapid, id as featureid, 'City: ' || name as name, 9, 'City' as category
                 FROM map_shp
                 WHERE map_id = 12 
                 AND region_id = @region
 
                 -- get 343 ridings from the 2023 federal representation order
                 UNION
-                SELECT region_id as regionid, map_id as mapid, id as featureid, '2023 Riding: ' || name as name, 1
+                SELECT map_shp.region_id, map_shp.map_id, map_shp.id, map.name || ': ' || map_shp.name, 1, map.name
                 FROM map_shp
-                WHERE map_id = 30 
-                AND region_id = @region
+                INNER JOIN map ON map_shp.map_id = map.id
+                WHERE map.id = 30
+                AND map_shp.region_id = @region
 
                 -- get 338 ridings from the 2013 federal representation order
                 UNION
-                SELECT region_id as regionid, map_id as mapid, id as featureid, '2013 Riding: ' || name as name, 2
+                SELECT map_shp.region_id, map_shp.map_id, map_shp.id, map.name || ': ' || map_shp.name, 2, map.name
                 FROM map_shp
-                WHERE map_id = 20 
-                AND region_id = @region
+                INNER JOIN map ON map_shp.map_id = map.id
+                WHERE map.id = 20
+                AND map_shp.region_id = @region
+
+                -- get provincial ridings
+                UNION
+                SELECT map.region_id, map_shp.map_id, map_shp.id, map.name || ': ' || map_shp.name, 3, map.name
+                FROM map_shp
+                INNER JOIN map ON map_shp.map_id = map.id
+                WHERE map.region_id = @region
+                AND map.name LIKE '%Ridings'
 
                 ORDER BY 5, 4
             ", new { region });

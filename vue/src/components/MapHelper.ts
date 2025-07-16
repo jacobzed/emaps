@@ -115,7 +115,7 @@ export class MapHelper {
             // disable fullscreen control
             fullscreenControl: false,
             // restrict zoom/pan to Canada
-            restriction: { latLngBounds: { east: -52, west: -132, north: 60, south: 40 } },
+            restriction: { latLngBounds: { east: -50, west: -140, north: 65, south: 40 } },
             // disable most labels since they create visual clutter
             // https://developers.google.com/maps/documentation/javascript/style-reference#stylers
             styles: [

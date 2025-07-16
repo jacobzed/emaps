@@ -31,6 +31,7 @@ const loading = ref(false);
 const regions = ref<Region[]>([]);
 const region = ref<Region | null>(null);
 const boundaries = ref<Feature[]>([]);
+const boundariesCategory = ref<string[]>([]);
 const boundary = ref<Feature | null>(null);
 const censusTraits = ref<CensusTrait[]>([]);
 const electionTraits = ref<ElectionTrait[]>([]);
@@ -39,10 +40,43 @@ const dual = ref(false);
 const map1 = ref<InstanceType<typeof Map> | null>(null);
 const map2 = ref<InstanceType<typeof Map> | null>(null);
 
+onMounted(async () => {
+    try {
+        // Census traits don't vary by region so they can be loaded immediately
+        censusTraits.value = await getCensusTraits();
+        loadVisibleCensusTraits();
+        regions.value = await getRegions();
+
+        if (window.location.hash) {
+            popState();
+        }
+        else {
+            // const last = localStorage.getItem('region') || 'BC';
+            // const targetRegion = regions.value.find(r => r.id == last);
+            // if (targetRegion) {
+            //     selectRegion(targetRegion);
+            // }
+            selectRegion(regions.value[0]);
+            showAllRidings();
+        }
+        window.addEventListener('popstate', popState);
+
+    } catch (e) {
+        showError(e);
+    }
+});
+
+onErrorCaptured((err: unknown) => {
+    loading.value = false;
+    showError(err);
+    return false;
+});
+
 async function selectRegion(selectedRegion: Region, clicked: boolean = false) {
     dialog.value = '';
     region.value = selectedRegion;
     boundaries.value = await getBoundaries(region.value.id);
+    boundariesCategory.value = Array.from(new Set(boundaries.value.map(b => b.category)));
     electionTraits.value = await getElectionTraits(region.value.id);
     loadVisibleElectionTraits();
     if (clicked) {
@@ -101,7 +135,8 @@ async function showAllRidings() {
 }
 
 function clickRiding(props: any) {
-    selectRegionAndBoundary(props.region_id, '2023 Riding: ' + props.name, true);
+    console.log(props);
+    selectRegionAndBoundary(props.region_id, '2023 Federal Ridings: ' + props.name, true);
 }
 
 /** Refreshes data after the trait list is customized. */
@@ -149,12 +184,6 @@ function loadVisibleElectionTraits() {
             count++;
         }
     });
-    // If traits are ever renamed we will need to reset to the defaults
-    if (count == 0) {
-        electionTraits.value.forEach(t => {
-            t.visible = t.electionId == 44;
-        });
-    }
 }
 
 function pushState() {
@@ -177,34 +206,6 @@ function indent(text: string) {
     return '&nbsp;'.repeat(count);
 };
 
-onMounted(async () => {
-    try {
-        censusTraits.value = await getCensusTraits();
-        loadVisibleCensusTraits();
-        regions.value = await getRegions();
-
-        if (window.location.hash) {
-            popState();
-        }
-        else {
-            const last = localStorage.getItem('region') || 'BC';
-            const targetRegion = regions.value.find(r => r.id == last);
-            if (targetRegion) {
-                selectRegion(targetRegion);
-            }
-        }
-        window.addEventListener('popstate', popState);
-
-    } catch (e) {
-        showError(e);
-    }
-})
-
-onErrorCaptured((err: unknown) => {
-    loading.value = false;
-    showError(err);
-    return false;
-});
 
 </script>
 
@@ -220,7 +221,7 @@ onErrorCaptured((err: unknown) => {
             <a href="#" @click.prevent="dialog = 'boundary'" class="dropdown">{{ boundary ? boundary.name : "Select..." }}</a>
         </div>
         <div>
-            <a href="#" @click="showAllRidings">Show All Ridings</a>
+            <a href="#" @click="showAllRidings">Show All Federal Ridings</a>
         </div>
         <div>
             <a href="#" @click.prevent="dialog = 'about'">About</a>
@@ -267,16 +268,21 @@ onErrorCaptured((err: unknown) => {
     </div>
 
     <div class="dialog" v-show="dialog == 'boundary'">
-        <p>Please select your electoral boundary. This site gives you the flexibility to view any election results independently of which boundary was used in the original election.
+        <p><strong>Please select an electoral boundary.</strong> This site gives you the flexibility to view any election results independently of which boundary was used in the original election.
             You can see election results exactly as they appeared, or you can also view past election results as they would have looked in a redrawn boundary.
             If you are running a municipal election, you can view federal and provincial election results just within your municipal boundary.</p>
-        <p>The 2015, 2019, and 2021 federal general elections used the 2021 riding representation.</p>
+        <p>The 2015, 2019, and 2021 federal general elections used the 2013 riding representation.</p>
         <p><strong>The 2025 federal general election used the 2023 riding representation.</strong></p>
-        <ul class="cols">
-            <li v-for="b in boundaries" :key="b.mapId + '-' + b.featureId">
-                <a href="#" @click.prevent="selectBoundary(b, true)">{{ b.name }}</a>
-            </li>
-        </ul>
+        <div style="display: flex; gap: 10px;">
+            <div v-for="category in boundariesCategory" :key="category">
+                <p><strong>{{ category }}</strong></p>
+                <ul>
+                    <li v-for="b in boundaries.filter(x => x.category == category)" :key="b.mapId + '-' + b.featureId">
+                        <a href="#" @click.prevent="selectBoundary(b, true)">{{ b.name.replace(category + ': ', '') }}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <div class="dialog" v-show="dialog == 'trait'">

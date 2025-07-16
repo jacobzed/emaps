@@ -72,6 +72,7 @@ export type Feature = {
     mapId: number;
     featureId: number;
     name: string;
+    category: string;
 }
 
 export type Region = {
