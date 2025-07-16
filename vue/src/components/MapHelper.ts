@@ -106,8 +106,8 @@ export class MapHelper {
 
         this.map = new google.maps.Map(mapElement, {
             //center: { lat: 43.65107, lng: -79.347015 }, // toronto
-            center: { lat: 49.23, lng: -122.98 }, // vancouver
-            zoom: 12, // 22=max zoom in, 18=max useful zoom in, 12=city scale zoom, 4=country scale zoom
+            center: lastLocation?.center ?? { lat: 49.23, lng: -122.98 }, // vancouver
+            zoom: lastLocation?.zoom ?? 12, // 22=max zoom in, 18=max useful zoom in, 12=city scale zoom, 4=country scale zoom
             // scroll wheel zoom
             scrollwheel: true,
             // disable satellite map type
@@ -138,10 +138,12 @@ export class MapHelper {
 
         });
 
-        if (lastLocation) {
-            this.map.setZoom(lastLocation.zoom);
-            this.map.setCenter(lastLocation.center);
-        }
+        // setTimeout(() => {
+        //     if (lastLocation) {
+        //         this.map.setZoom(lastLocation.zoom);
+        //         this.map.setCenter(lastLocation.center);
+        //     }
+        // }, 1000);
 
         this.attachBoundsChangedHandlers();
     }
@@ -411,11 +413,14 @@ export class MapHelper {
             }
         }
 
-        if (layer.type == 'polyline') {
-            this.map.fitBounds(layer.bounds);
-        }
-
         layer.visible = true;
+    }
+
+    zoomToLayer(layer: MapLayer) {
+        this.map.fitBounds(layer.bounds);
+        const zoom = this.map.getZoom();
+        const center = this.map.getCenter();
+        lastLocation = { zoom, center };
     }
 
     /** Hide all visible layers. */

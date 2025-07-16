@@ -56,10 +56,10 @@ async function selectBoundary(selectedBoundary: Feature, clicked: boolean = fals
     dialog.value = '';
     boundary.value = selectedBoundary;
     if (map1.value) {
-        await map1.value.selectBoundary(selectedBoundary);
+        await map1.value.selectBoundary(selectedBoundary, true);
     }
     if (map2.value) {
-        await map2.value.selectBoundary(selectedBoundary);
+        await map2.value.selectBoundary(selectedBoundary, true);
     }
     if (clicked) {
         pushState();
@@ -86,7 +86,7 @@ async function selectRegionAndBoundary(regionId: string, boundaryName: string, c
 
 function cloneBoundary() {
     if (boundary.value && map2.value) {
-        map2.value.selectBoundary(boundary.value);
+        map2.value.selectBoundary(boundary.value, false);
     }
 }
 

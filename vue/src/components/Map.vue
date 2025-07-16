@@ -68,7 +68,7 @@ onUnmounted(() => {
 });
 
 /** Select a feature to display as the boundary area. */
-async function selectBoundary(selected: Feature) {
+async function selectBoundary(selected: Feature, zoom: boolean = false) {
     boundary.value = selected;
 
     const geojson = await getFeature(boundary.value.mapId, boundary.value.featureId);
@@ -78,6 +78,9 @@ async function selectBoundary(selected: Feature) {
     });
     const layer = map.addLayer({ name: 'Boundary' }, geojson);
     map.showLayer(layer);
+    if (zoom) {
+        map.zoomToLayer(layer);
+    }
     tooltip.value = null;
 
     // If no trait is selected, select the first census trait
